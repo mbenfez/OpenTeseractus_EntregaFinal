@@ -1,0 +1,60 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Base application theme. -->
+    <style name="Base.Theme.OpenTeseractus" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/primary</item>
+        <item name="colorPrimaryContainer">@color/primaryContainer</item>
+
+        <item name="android:colorBackground">@color/background</item>
+
+        <item name="colorSurface">@color/surface</item>
+        <item name="colorSurfaceVariant">@color/surfaceVariant</item>
+
+        <item name="colorOnBackground">@color/onBackground</item>
+        <item name="colorOnSurface">@color/onSurface</item>
+        <item name="colorOnSurfaceVariant">@color/onSurfaceVariant</item>
+
+        <item name="android:textColor">@color/onSurfaceVariant</item>
+
+        <!-- Bordes globales -->
+        <item name="colorOutline">@color/border</item>
+        <item name="colorOutlineVariant">@color/borderLight</item>
+
+        <item name="bottomSheetDialogTheme">@style/BottomSheetTheme</item>
+
+        <item name="elevationOverlayEnabled">true</item>
+    </style>
+
+    <style name="CustomBottomNavIndicator" parent="Widget.Material3.BottomNavigationView.ActiveIndicator">
+        <item name="android:color">@color/primaryContainer</item>
+    </style>
+
+    <style name="BottomSheetTheme" parent="ThemeOverlay.Material3.BottomSheetDialog">
+        <item name="bottomSheetStyle">@style/CustomBottomSheet</item>
+    </style>
+
+    <style name="CustomBottomSheet" parent="Widget.Material3.BottomSheet.Modal">
+        <item name="android:background">@color/surface</item>
+    </style>
+
+    <style name="DarkCard" parent="Widget.Material3.CardView.Elevated">
+        <item name="cardBackgroundColor">@color/surface</item>
+        <item name="strokeColor">@color/border</item>
+        <item name="strokeWidth">1dp</item>
+        <item name="cardCornerRadius">16dp</item>
+        <item name="cardElevation">2dp</item>
+    </style>
+
+    <style name="DarkCardAccent" parent="Widget.Material3.CardView.Elevated">
+        <item name="cardBackgroundColor">@color/surface</item>
+        <item name="strokeColor">@color/borderAccent</item>
+        <item name="strokeWidth">1.5dp</item>
+        <item name="cardCornerRadius">16dp</item>
+        <item name="cardElevation">4dp</item>
+    </style>
+
+    <style name="Theme.OpenTeseractus" parent="Base.Theme.OpenTeseractus" />
+
+    <style name="TransparentExpandedTitle">
+        <item name="android:textColor">@android:color/transparent</item>
+    </style>
+</resources>

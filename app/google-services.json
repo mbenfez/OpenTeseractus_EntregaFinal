@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "353972512726",
+    "project_id": "openteseractus-firebase",
+    "storage_bucket": "openteseractus-firebase.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:353972512726:android:817157d344e141afbd6677",
+        "android_client_info": {
+          "package_name": "com.example.openteseractus"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDqFBk26n43n700AsXOGPnZLfu7OviaTmo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

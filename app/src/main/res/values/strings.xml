@@ -1,0 +1,51 @@
+<resources>
+    <string name="app_name">OpenTeseractus</string>
+    <string name="yes">Sí</string>
+    <!--Usuario-->
+    <string name="username">Nombre de usuario</string>
+    <string name="email">Email</string>
+    <string name="pswd">Contraseña</string>
+    <!--Login/Signin-->
+    <string name="login">Iniciar sesión</string>
+    <string name="signin">Registrarse</string>
+    <string name="login_signin_msg">¿No tienes cuenta? Regístrate</string>
+    <string name="signin_login_msg">¿Ya tienes cuenta? Inicia sesión</string>
+    <!--Create-->
+    <string name="create_acc">Crear cuenta</string>
+    <string name="create_group">Crear grupo</string>
+    <string name="create_teseract">Crear teseracto</string>
+    <string name="create_teseract_from">"¿Crear teseracto a partir de "</string>
+    <string name="usr_prof">Perfil</string>
+    <string name="home">Grupos</string>
+    <string name="add_pic">Toca para añadir foto</string>
+    <string name="add_name_group">Nombre del grupo</string>
+    <string name="group_billboard">Cartelera</string>
+    <string name="group_members">Miembros</string>
+    <!--Teseractos-->
+    <string name="movies">Películas</string>
+    <string name="tvshows">Series</string>
+    <string name="detail_seasons">" temporadas • "</string>
+    <string name="detail_episodes">" episodios"</string>
+    <string name="group_rating">"Grupo"</string>
+    <string name="synopsis">Sinopsis</string>
+    <string name="search_user">Buscar usuario</string>
+    <!--Invites-->
+    <string name="invites">Invitaciones</string>
+    <string name="invite_msg">te ha invitado a unirte al grupo!</string>
+    <!--Search-->
+    <string name="search_hint">Buscar…</string>
+    <string name="open_chat">Abrir chat</string>
+    <string name="rating_tmdb">TMDB</string>
+    <string name="msg_unrated">No hay valoraciones</string>
+    <string name="min_rating">0.5</string>
+    <string name="advanced_ratings_collapse">Valoración avanzada</string>
+    <string name="direction_rating">Dirección</string>
+    <string name="script_rating">Guión</string>
+    <string name="actors_rating">Actores</string>
+    <string name="gen_rating">Valoración general</string>
+    <string name="save_rating">Guardar valoración</string>
+    <string name="title_rating">"Tu valoración de "</string>
+    <string name="msg_no_ratings">Aún no hay valoraciones</string>
+    <string name="no_ratings_msg">Aún no has valorado</string>
+    <string name="user_rating_text">Tu nota</string>
+</resources>
