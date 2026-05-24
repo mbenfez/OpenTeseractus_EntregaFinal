@@ -1,5 +1,6 @@
 package com.example.openteseractus.ui.ventanas;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -114,17 +115,13 @@ public class TeseractoActivity extends AppCompatActivity {
                         cargarDetalleTMDB(teseracto);
 
                         btnChat.setOnClickListener(v -> {
-                            // Intent intent = new Intent(
-                            //         TeseractoActivity.this,
-                            //         ChatTeseractoActivity.class
-                            // );
-                            //
-                            // intent.putExtra(
-                            //         "TESERACTO_ID",
-                            //         teseractoId
-                            // );
-                            //
-                            // startActivity(intent);
+                            Intent intent = new Intent(
+                                    TeseractoActivity.this,
+                                    ChatTeseractoActivity.class
+                            );
+                            intent.putExtra("TESERACTO_ID", teseractoId);
+                            intent.putExtra("TESERACTO_TITULO", teseracto.getTitulo());
+                            startActivity(intent);
                         });
                     }
 

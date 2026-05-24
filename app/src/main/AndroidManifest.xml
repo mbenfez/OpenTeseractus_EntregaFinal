@@ -14,6 +14,10 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.OpenTeseractus">
         <activity
+            android:name=".ui.ventanas.ChatTeseractoActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
+        <activity
             android:name=".ui.ventanas.InvitacionesActivity"
             android:exported="false" />
         <activity

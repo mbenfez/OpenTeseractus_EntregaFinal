@@ -3,6 +3,7 @@ package com.example.openteseractus.repositorios;
 import com.example.openteseractus.callbacks.FirestoreCallback;
 import com.example.openteseractus.modelos.Mensaje;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.Query;
 
 import java.util.List;
@@ -21,14 +22,23 @@ public class MensajeRepository {
                 .addOnFailureListener(e -> callback.onFailure(e.getMessage()));
     }
 
-    public void obtenerMensajes(String idTeseracto, FirestoreCallback<List<Mensaje>> callback) {
-
-        db.collection("teseractos")
+    // Escucha mensajes en tiempo real. Devuelve el listener para poder cancelarlo.
+    public ListenerRegistration escucharMensajes(
+            String idTeseracto,
+            FirestoreCallback<List<Mensaje>> callback
+    ) {
+        return db.collection("teseractos")
                 .document(idTeseracto)
                 .collection("mensajes")
                 .orderBy("fechaEnvio", Query.Direction.ASCENDING)
-                .get()
-                .addOnSuccessListener(q -> callback.onSuccess(q.toObjects(Mensaje.class)))
-                .addOnFailureListener(e -> callback.onFailure(e.getMessage()));
+                .addSnapshotListener((snapshot, error) -> {
+                    if (error != null) {
+                        callback.onFailure(error.getMessage());
+                        return;
+                    }
+                    if (snapshot != null) {
+                        callback.onSuccess(snapshot.toObjects(Mensaje.class));
+                    }
+                });
     }
 }
