@@ -38,9 +38,9 @@ public class MensajeAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
 
     @Override
     public int getItemViewType(int position) {
-        return mensajes.get(position).esAutor(uidActual)
-                ? TIPO_ENVIADO
-                : TIPO_RECIBIDO;
+        Mensaje m = mensajes.get(position);
+        android.util.Log.d("CHAT_DEBUG", "uidActual=" + uidActual + "  uidAutor=" + m.getUidAutor());
+        return m.esAutor(uidActual) ? TIPO_ENVIADO : TIPO_RECIBIDO;
     }
 
     @NonNull

@@ -54,8 +54,9 @@ public class MiembroAdapter extends RecyclerView.Adapter<MiembroAdapter.ViewHold
                         holder.tvNombre.setText(usuario.getUsername());
                         Glide.with(holder.itemView.getContext())
                                 .load(usuario.getFotoPerfilUrl())
-                                .placeholder(R.drawable.bg_rounded_border)
-                                .error(R.drawable.bg_rounded_border)
+                                .placeholder(R.drawable.pfp_placeholder)
+                                .error(R.drawable.pfp_placeholder)
+                                .circleCrop()
                                 .into(holder.fotoPerf);
 
                         if (usuario.isActivo()) {

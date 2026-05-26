@@ -179,8 +179,9 @@ public class HomeActivity extends AppCompatActivity {
                     public void onSuccess(Usuario usuario) {
                         Glide.with(HomeActivity.this)
                                 .load(usuario.getFotoPerfilUrl())
-                                .placeholder(R.drawable.bg_rounded_border)
-                                .error(R.drawable.bg_rounded_border)
+                                .placeholder(R.drawable.pfp_placeholder)
+                                .error(R.drawable.pfp_placeholder)
+                                .circleCrop()
                                 .into(imgPerfil);
                     }
 

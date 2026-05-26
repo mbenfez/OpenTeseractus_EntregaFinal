@@ -13,18 +13,14 @@ public class UsuarioRepository {
 
     private static final String TAG = "UsuarioRepository";
     private static final String COLLECTION_USUARIOS = "usuarios";
-    private static final String PFP_PLACEHOLDER =
-            "https://firebasestorage.googleapis.com/v0/b/openteseractus-firebase.firebasestorage.app/o/Dise%C3%B1o%20sin%20t%C3%ADtulo%20(3).png?alt=media&token=0f3dceca-1e8b-406d-8952-15df5efd1f7f";
     private FirebaseFirestore db;
+
     public UsuarioRepository() {
         this.db = FirebaseFirestore.getInstance();
     }
 
     // Crea un nuevo usuario en Firestore
     public void crearUsuario(Usuario usuario, FirestoreCallback<Usuario> callback) {
-        if (usuario.getFotoPerfilUrl() == null) {
-            usuario.setFotoPerfilUrl(PFP_PLACEHOLDER);
-        }
 
         db.collection(COLLECTION_USUARIOS)
                 .document(usuario.getUid())
