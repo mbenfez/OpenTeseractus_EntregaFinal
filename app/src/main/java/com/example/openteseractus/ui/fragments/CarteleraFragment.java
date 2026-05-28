@@ -8,6 +8,8 @@ import android.view.ViewGroup;
 import android.widget.ImageButton;
 import android.widget.Toast;
 
+import android.view.MotionEvent;
+
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -68,31 +70,11 @@ public class CarteleraFragment extends Fragment {
         recyclerPeliculas = view.findViewById(R.id.recyclerPeliculas);
         recyclerSeries = view.findViewById(R.id.recyclerSeries);
 
-        // evitar que la funcionalidad de fragment no se superponga al slide lateral
-        recyclerPeliculas.addOnItemTouchListener(
-                new RecyclerView.SimpleOnItemTouchListener() {
-
-                    @Override
-                    public boolean onInterceptTouchEvent(
-                            @NonNull RecyclerView rv,
-                            @NonNull android.view.MotionEvent e
-                    ) {
-                        rv.getParent().requestDisallowInterceptTouchEvent(true);
-                        return false;
-                    }
-                });
-        recyclerSeries.addOnItemTouchListener(
-                new RecyclerView.SimpleOnItemTouchListener() {
-
-                    @Override
-                    public boolean onInterceptTouchEvent(
-                            @NonNull RecyclerView rv,
-                            @NonNull android.view.MotionEvent e
-                    ) {
-                        rv.getParent().requestDisallowInterceptTouchEvent(true);
-                        return false;
-                    }
-                });
+        // Permitir scroll horizontal dentro del ViewPager2 detectando
+        // la dirección del gesto: solo bloquea la intercepción del padre
+        // cuando el movimiento es claramente horizontal.
+        habilitarScrollHorizontal(recyclerPeliculas);
+        habilitarScrollHorizontal(recyclerSeries);
 
         btnCrear = view.findViewById(R.id.btnCrearTeseracto);
 
@@ -176,5 +158,53 @@ public class CarteleraFragment extends Fragment {
 
         super.onResume();
         cargarTeseractos();
+    }
+
+    /**
+     * Registra un touch listener en el RecyclerView para que el ViewPager2
+     * no intercepte los gestos horizontales cuando el usuario está desplazando
+     * la lista. Solo cede el control al padre cuando el gesto es claramente
+     * vertical (para que el NestedScrollView pueda desplazarse).
+     */
+    private void habilitarScrollHorizontal(RecyclerView recyclerView) {
+
+        recyclerView.addOnItemTouchListener(new RecyclerView.OnItemTouchListener() {
+
+            private float startX, startY;
+
+            @Override
+            public boolean onInterceptTouchEvent(
+                    @NonNull RecyclerView rv,
+                    @NonNull MotionEvent e
+            ) {
+                switch (e.getAction()) {
+                    case MotionEvent.ACTION_DOWN:
+                        startX = e.getX();
+                        startY = e.getY();
+                        // En el primer toque bloqueamos la intercepción del padre
+                        // para que el siguiente ACTION_MOVE llegue aquí primero.
+                        rv.getParent().requestDisallowInterceptTouchEvent(true);
+                        break;
+                    case MotionEvent.ACTION_MOVE:
+                        float dx = Math.abs(e.getX() - startX);
+                        float dy = Math.abs(e.getY() - startY);
+                        // Mantenemos el bloqueo solo si el gesto es horizontal;
+                        // si es vertical lo liberamos para el NestedScrollView.
+                        rv.getParent().requestDisallowInterceptTouchEvent(dx >= dy);
+                        break;
+                    case MotionEvent.ACTION_UP:
+                    case MotionEvent.ACTION_CANCEL:
+                        rv.getParent().requestDisallowInterceptTouchEvent(false);
+                        break;
+                }
+                return false;
+            }
+
+            @Override
+            public void onTouchEvent(@NonNull RecyclerView rv, @NonNull MotionEvent e) {}
+
+            @Override
+            public void onRequestDisallowInterceptTouchEvent(boolean disallowIntercept) {}
+        });
     }
 }

@@ -89,6 +89,27 @@ public class UsuarioRepository {
                 });
     }
 
+    // Obtiene el email asociado a un username (para login con nombre de usuario)
+    public void obtenerEmailPorUsername(String username, FirestoreCallback<String> callback) {
+        db.collection(COLLECTION_USUARIOS)
+                .whereEqualTo("username", username)
+                .limit(1)
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    if (!queryDocumentSnapshots.isEmpty()) {
+                        String email = queryDocumentSnapshots.getDocuments().get(0).getString("email");
+                        if (email != null && !email.isEmpty()) {
+                            callback.onSuccess(email);
+                        } else {
+                            callback.onFailure("No se encontró el email asociado a este usuario");
+                        }
+                    } else {
+                        callback.onFailure("Nombre de usuario no encontrado");
+                    }
+                })
+                .addOnFailureListener(e -> callback.onFailure(e.getMessage()));
+    }
+
     // Verifica si un username ya existe
     public void existeUsername(String username, FirestoreCallback<Boolean> callback) {
         db.collection(COLLECTION_USUARIOS)
@@ -113,6 +134,21 @@ public class UsuarioRepository {
                         Log.d("USUARIO_ESTADO", "Estado actualizado"))
                 .addOnFailureListener(e ->
                         Log.e("USUARIO_ESTADO", e.getMessage()));
+    }
+
+    // Elimina un usuario de Firestore
+    public void eliminarUsuario(String uid, FirestoreCallback<Void> callback) {
+        db.collection(COLLECTION_USUARIOS)
+                .document(uid)
+                .delete()
+                .addOnSuccessListener(aVoid -> {
+                    Log.d(TAG, "Usuario eliminado: " + uid);
+                    if (callback != null) callback.onSuccess(null);
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error al eliminar usuario", e);
+                    if (callback != null) callback.onFailure(e.getMessage());
+                });
     }
 
     // Obtiene todos los usuarios activos (para búsqueda/sugerencias)

@@ -1,11 +1,14 @@
 package com.example.openteseractus.ui.crear;
 
-import android.content.Intent;
+import android.app.AlertDialog;
 import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
+import android.widget.ScrollView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
@@ -23,7 +26,8 @@ import com.example.openteseractus.modelos.Grupo;
 import com.example.openteseractus.repositorios.GrupoRepository;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
-import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.google.android.material.card.MaterialCardView;
+import com.google.android.material.tabs.TabLayout;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
 import com.google.firebase.auth.FirebaseAuth;
@@ -32,19 +36,37 @@ import com.google.firebase.storage.StorageReference;
 
 public class CrearGrupoActivity extends AppCompatActivity {
 
+    // ── Common ──
     private MaterialToolbar toolbar;
+    private TabLayout tabLayout;
+    private ScrollView panelCrear;
+    private ScrollView panelUnirse;
+
+    // ── Panel crear ──
+    private FrameLayout frameGrupoFoto;
     private ImageView ivGrupoFoto;
-    private FloatingActionButton fabCambiarFoto;
     private TextInputLayout tilNombreGrupo;
     private TextInputEditText etNombreGrupo;
     private MaterialButton btnCrearGrupo;
     private ProgressBar progressBar;
 
+    // ── Panel unirse ──
+    private TextInputLayout tilCodigo;
+    private TextInputEditText etCodigo;
+    private MaterialButton btnBuscarGrupo;
+    private MaterialCardView cardPreviewGrupo;
+    private ImageView ivGrupoPreview;
+    private TextView tvGrupoPreviewNombre;
+    private MaterialButton btnUnirseGrupo;
+    private ProgressBar progressBarUnirse;
+
+    // ── Firebase ──
     private GrupoRepository grupoRepository;
     private FirebaseAuth auth;
     private FirebaseStorage storage;
 
     private Uri fotoUri = null;
+    private Grupo grupoEncontrado = null;
 
     private ActivityResultLauncher<String> pickImageLauncher;
 
@@ -62,18 +84,34 @@ public class CrearGrupoActivity extends AppCompatActivity {
         inicializarVistas();
         inicializarFirebase();
         setupToolbar();
+        setupTabs();
         setupListeners();
         setupImagePicker();
     }
 
     private void inicializarVistas() {
         toolbar = findViewById(R.id.toolbar);
+        tabLayout = findViewById(R.id.tabLayout);
+        panelCrear = findViewById(R.id.panelCrear);
+        panelUnirse = findViewById(R.id.panelUnirse);
+
+        // Panel crear
+        frameGrupoFoto = findViewById(R.id.frameGrupoFoto);
         ivGrupoFoto = findViewById(R.id.ivGrupoFoto);
-        fabCambiarFoto = findViewById(R.id.fabCambiarFoto);
         tilNombreGrupo = findViewById(R.id.tilNombreGrupo);
         etNombreGrupo = findViewById(R.id.etNombreGrupo);
         btnCrearGrupo = findViewById(R.id.btnCrearGrupo);
         progressBar = findViewById(R.id.progressBar);
+
+        // Panel unirse
+        tilCodigo = findViewById(R.id.tilCodigo);
+        etCodigo = findViewById(R.id.etCodigo);
+        btnBuscarGrupo = findViewById(R.id.btnBuscarGrupo);
+        cardPreviewGrupo = findViewById(R.id.cardPreviewGrupo);
+        ivGrupoPreview = findViewById(R.id.ivGrupoPreview);
+        tvGrupoPreviewNombre = findViewById(R.id.tvGrupoPreviewNombre);
+        btnUnirseGrupo = findViewById(R.id.btnUnirseGrupo);
+        progressBarUnirse = findViewById(R.id.progressBarUnirse);
     }
 
     private void inicializarFirebase() {
@@ -86,9 +124,25 @@ public class CrearGrupoActivity extends AppCompatActivity {
         setSupportActionBar(toolbar);
         if (getSupportActionBar() != null) {
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-            toolbar.setTitle(R.string.create_group);
         }
         toolbar.setNavigationOnClickListener(v -> finish());
+    }
+
+    private void setupTabs() {
+        tabLayout.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
+            @Override
+            public void onTabSelected(TabLayout.Tab tab) {
+                if (tab.getPosition() == 0) {
+                    panelCrear.setVisibility(View.VISIBLE);
+                    panelUnirse.setVisibility(View.GONE);
+                } else {
+                    panelCrear.setVisibility(View.GONE);
+                    panelUnirse.setVisibility(View.VISIBLE);
+                }
+            }
+            @Override public void onTabUnselected(TabLayout.Tab tab) {}
+            @Override public void onTabReselected(TabLayout.Tab tab) {}
+        });
     }
 
     private void setupImagePicker() {
@@ -97,42 +151,48 @@ public class CrearGrupoActivity extends AppCompatActivity {
                 uri -> {
                     if (uri != null) {
                         fotoUri = uri;
-                        Glide.with(this)
-                                .load(uri)
-                                .into(ivGrupoFoto);
+                        Glide.with(this).load(uri).centerCrop().into(ivGrupoFoto);
                     }
                 }
         );
     }
 
     private void setupListeners() {
-        fabCambiarFoto.setOnClickListener(v ->
-                pickImageLauncher.launch("image/*")
-        );
+        // La imagen del grupo es el botón de selección
+        frameGrupoFoto.setOnClickListener(v -> pickImageLauncher.launch("image/*"));
 
         btnCrearGrupo.setOnClickListener(v -> crearGrupo());
+
+        btnBuscarGrupo.setOnClickListener(v -> buscarGrupoPorCodigo());
+
+        btnUnirseGrupo.setOnClickListener(v -> {
+            if (grupoEncontrado != null) {
+                mostrarConfirmacionUnirse(grupoEncontrado);
+            }
+        });
     }
+
+    // ─────────────────────────────────────────────────
+    //  CREAR GRUPO
+    // ─────────────────────────────────────────────────
 
     private void crearGrupo() {
         String nombre = etNombreGrupo.getText().toString().trim();
 
-        // Validaciones
         if (nombre.isEmpty()) {
             tilNombreGrupo.setError("Ingresa un nombre para el grupo");
             return;
         }
-
         if (nombre.length() > 50) {
             tilNombreGrupo.setError("El nombre no puede superar 50 caracteres");
             return;
         }
 
         tilNombreGrupo.setError(null);
-        mostrarLoading(true);
+        mostrarLoadingCrear(true);
 
         String userId = auth.getCurrentUser().getUid();
 
-        // Si hay foto, subirla primero
         if (fotoUri != null) {
             subirFotoYCrearGrupo(nombre, userId);
         } else {
@@ -152,9 +212,8 @@ public class CrearGrupoActivity extends AppCompatActivity {
                         )
                 )
                 .addOnFailureListener(e -> {
-                    mostrarLoading(false);
-                    Toast.makeText(this,
-                            "Error al subir la foto: " + e.getMessage(),
+                    mostrarLoadingCrear(false);
+                    Toast.makeText(this, "Error al subir la foto: " + e.getMessage(),
                             Toast.LENGTH_SHORT).show();
                 });
     }
@@ -167,30 +226,122 @@ public class CrearGrupoActivity extends AppCompatActivity {
         grupoRepository.crearGrupo(nuevoGrupo, userId, new FirestoreCallback<Grupo>() {
             @Override
             public void onSuccess(Grupo grupo) {
-                mostrarLoading(false);
+                mostrarLoadingCrear(false);
                 Toast.makeText(CrearGrupoActivity.this,
-                        "Grupo creado exitosamente",
-                        Toast.LENGTH_SHORT).show();
-
-                // Volver al Home con resultado exitoso
+                        "Grupo creado exitosamente", Toast.LENGTH_SHORT).show();
                 setResult(RESULT_OK);
                 finish();
             }
 
             @Override
             public void onFailure(String error) {
-                mostrarLoading(false);
+                mostrarLoadingCrear(false);
                 Toast.makeText(CrearGrupoActivity.this,
-                        "Error al crear grupo: " + error,
-                        Toast.LENGTH_SHORT).show();
+                        "Error al crear grupo: " + error, Toast.LENGTH_SHORT).show();
             }
         });
     }
 
-    private void mostrarLoading(boolean show) {
+    private void mostrarLoadingCrear(boolean show) {
         progressBar.setVisibility(show ? View.VISIBLE : View.GONE);
         btnCrearGrupo.setEnabled(!show);
-        fabCambiarFoto.setEnabled(!show);
+        frameGrupoFoto.setEnabled(!show);
         etNombreGrupo.setEnabled(!show);
+    }
+
+    // ─────────────────────────────────────────────────
+    //  UNIRSE CON CÓDIGO
+    // ─────────────────────────────────────────────────
+
+    private void buscarGrupoPorCodigo() {
+        String codigo = etCodigo.getText().toString().trim().toUpperCase();
+
+        if (codigo.isEmpty()) {
+            tilCodigo.setError("Introduce un código");
+            return;
+        }
+        if (codigo.length() != 6) {
+            tilCodigo.setError("El código debe tener 6 caracteres");
+            return;
+        }
+
+        tilCodigo.setError(null);
+        cardPreviewGrupo.setVisibility(View.GONE);
+        btnUnirseGrupo.setVisibility(View.GONE);
+        progressBarUnirse.setVisibility(View.VISIBLE);
+        grupoEncontrado = null;
+
+        grupoRepository.buscarGrupoPorCodigo(codigo, new FirestoreCallback<Grupo>() {
+            @Override
+            public void onSuccess(Grupo grupo) {
+                runOnUiThread(() -> {
+                    progressBarUnirse.setVisibility(View.GONE);
+                    grupoEncontrado = grupo;
+
+                    tvGrupoPreviewNombre.setText(grupo.getNomGrupo());
+                    if (grupo.getFotoGrupoUrl() != null && !grupo.getFotoGrupoUrl().isEmpty()) {
+                        Glide.with(CrearGrupoActivity.this)
+                                .load(grupo.getFotoGrupoUrl())
+                                .centerCrop()
+                                .into(ivGrupoPreview);
+                    } else {
+                        ivGrupoPreview.setImageResource(android.R.drawable.ic_menu_gallery);
+                    }
+
+                    cardPreviewGrupo.setVisibility(View.VISIBLE);
+                    btnUnirseGrupo.setVisibility(View.VISIBLE);
+                });
+            }
+
+            @Override
+            public void onFailure(String error) {
+                runOnUiThread(() -> {
+                    progressBarUnirse.setVisibility(View.GONE);
+                    tilCodigo.setError("Código inválido o no encontrado");
+                    grupoEncontrado = null;
+                });
+            }
+        });
+    }
+
+    private void mostrarConfirmacionUnirse(Grupo grupo) {
+        new AlertDialog.Builder(this)
+                .setTitle(getString(R.string.confirm_join_group))
+                .setMessage("¿Unirte a \"" + grupo.getNomGrupo() + "\"?")
+                .setPositiveButton("Unirse", (d, w) -> unirseAlGrupo(grupo))
+                .setNegativeButton("Cancelar", null)
+                .show();
+    }
+
+    private void unirseAlGrupo(Grupo grupo) {
+        String uid = auth.getCurrentUser().getUid();
+        progressBarUnirse.setVisibility(View.VISIBLE);
+        btnUnirseGrupo.setEnabled(false);
+        btnBuscarGrupo.setEnabled(false);
+
+        grupoRepository.unirseAGrupo(grupo.getId(), uid, new FirestoreCallback<Void>() {
+            @Override
+            public void onSuccess(Void unused) {
+                runOnUiThread(() -> {
+                    progressBarUnirse.setVisibility(View.GONE);
+                    Toast.makeText(CrearGrupoActivity.this,
+                            "Te has unido a " + grupo.getNomGrupo(),
+                            Toast.LENGTH_SHORT).show();
+                    setResult(RESULT_OK);
+                    finish();
+                });
+            }
+
+            @Override
+            public void onFailure(String error) {
+                runOnUiThread(() -> {
+                    progressBarUnirse.setVisibility(View.GONE);
+                    btnUnirseGrupo.setEnabled(true);
+                    btnBuscarGrupo.setEnabled(true);
+                    Toast.makeText(CrearGrupoActivity.this,
+                            "Error: " + error, Toast.LENGTH_SHORT).show();
+                });
+            }
+        });
     }
 }

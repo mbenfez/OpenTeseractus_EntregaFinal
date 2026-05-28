@@ -24,7 +24,7 @@ import java.util.Date;
 
 public class RegisterActivity extends AppCompatActivity {
 
-    private EditText etEmail, etPassword, etUsername;
+    private EditText etEmail, etPassword, etPasswordConfirm, etUsername;
     private Button btnRegister;
     private TextView tvGoToLogin;
     private AuthService authService;
@@ -43,6 +43,7 @@ public class RegisterActivity extends AppCompatActivity {
         authService = new AuthService();
         etEmail = findViewById(R.id.etEmail);
         etPassword = findViewById(R.id.etPassword);
+        etPasswordConfirm = findViewById(R.id.etPasswordConfirm);
         etUsername = findViewById(R.id.etUsername);
         btnRegister = findViewById(R.id.btnRegister);
         tvGoToLogin = findViewById(R.id.tvGoToLogin);
@@ -57,7 +58,13 @@ public class RegisterActivity extends AppCompatActivity {
 
         String email = etEmail.getText().toString().trim();
         String password = etPassword.getText().toString().trim();
+        String passwordConfirm = etPasswordConfirm.getText().toString().trim();
         String username = etUsername.getText().toString().trim();
+
+        if (!password.equals(passwordConfirm)) {
+            Toast.makeText(this, getString(R.string.pswd_no_match), Toast.LENGTH_SHORT).show();
+            return;
+        }
 
         Usuario usuario = new Usuario(null, username, new Date());
         usuario.setFechaRegistro(System.currentTimeMillis());

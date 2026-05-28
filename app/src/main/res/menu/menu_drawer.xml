@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <group android:id="@+id/group_account">
+        <item
+            android:id="@+id/nav_change_pfp"
+            android:icon="@android:drawable/ic_menu_camera"
+            android:title="@string/drawer_change_pfp" />
+        <item
+            android:id="@+id/nav_change_username"
+            android:icon="@drawable/ic_edit"
+            android:title="@string/drawer_change_username" />
+        <item
+            android:id="@+id/nav_reset_password"
+            android:icon="@drawable/ic_mail"
+            android:title="@string/drawer_reset_password" />
+    </group>
+
+    <group android:id="@+id/group_danger">
+        <item
+            android:id="@+id/nav_delete_account"
+            android:icon="@drawable/ic_close"
+            android:title="@string/drawer_delete_account" />
+        <item
+            android:id="@+id/nav_logout"
+            android:icon="@drawable/ic_logout"
+            android:title="@string/drawer_logout" />
+    </group>
+
+</menu>

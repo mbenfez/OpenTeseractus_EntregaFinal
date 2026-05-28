@@ -4,7 +4,21 @@
     <!--Usuario-->
     <string name="username">Nombre de usuario</string>
     <string name="email">Email</string>
+    <string name="email_or_username">Email o nombre de usuario</string>
     <string name="pswd">Contraseña</string>
+    <string name="pswd_confirm">Repetir contraseña</string>
+    <string name="pswd_no_match">Las contraseñas no coinciden</string>
+    <!--Home drawer-->
+    <string name="drawer_change_pfp">Cambiar foto de perfil</string>
+    <string name="drawer_change_username">Cambiar nombre de usuario</string>
+    <string name="drawer_reset_password">Restablecer contraseña</string>
+    <string name="drawer_delete_account">Eliminar cuenta</string>
+    <string name="drawer_logout">Cerrar sesión</string>
+    <string name="drawer_reset_email_sent">Correo enviado. Revisa tu bandeja de entrada.</string>
+    <string name="new_username_hint">Nuevo nombre de usuario</string>
+    <string name="confirm_delete_account">¿Eliminar cuenta?</string>
+    <string name="confirm_delete_msg">Esta acción es irreversible. Se eliminarán todos tus datos permanentemente.</string>
+    <string name="grupo_creado_por">Creado por </string>
     <!--Login/Signin-->
     <string name="login">Iniciar sesión</string>
     <string name="signin">Registrarse</string>
@@ -13,6 +27,11 @@
     <!--Create-->
     <string name="create_acc">Crear cuenta</string>
     <string name="create_group">Crear grupo</string>
+    <string name="join_group_code">Unirse con código</string>
+    <string name="join_group_code_hint">Código de invitación (6 caracteres)</string>
+    <string name="search_group">Buscar grupo</string>
+    <string name="join_group">Unirse al grupo</string>
+    <string name="confirm_join_group">¿Unirte al grupo?</string>
     <string name="create_teseract">Crear teseracto</string>
     <string name="create_teseract_from">"¿Crear teseracto a partir de "</string>
     <string name="usr_prof">Perfil</string>

@@ -14,16 +14,19 @@ import com.bumptech.glide.Glide;
 import com.example.openteseractus.R;
 import com.example.openteseractus.callbacks.FirestoreCallback;
 import com.example.openteseractus.modelos.Grupo;
+import com.example.openteseractus.modelos.Usuario;
 import com.example.openteseractus.repositorios.GrupoRepository;
+import com.example.openteseractus.repositorios.UsuarioRepository;
 
 import java.util.List;
 
 public class GrupoAdapter extends RecyclerView.Adapter<GrupoAdapter.GrupoViewHolder> {
 
     private List<Grupo> grupos;
-    private int cantidadMiembros; // Por ahora fijo, luego lo obtendremos de Firebase
     private OnGrupoClickListener listener;
     private GrupoRepository grupoRepository;
+    private UsuarioRepository usuarioRepository;
+
     public interface OnGrupoClickListener {
         void onGrupoClick(Grupo grupo);
     }
@@ -31,8 +34,8 @@ public class GrupoAdapter extends RecyclerView.Adapter<GrupoAdapter.GrupoViewHol
     public GrupoAdapter(List<Grupo> grupos, OnGrupoClickListener listener) {
         this.grupos = grupos;
         this.listener = listener;
-        this.cantidadMiembros = 1; // Al menos el creador
         grupoRepository = new GrupoRepository();
+        usuarioRepository = new UsuarioRepository();
     }
 
     @NonNull
@@ -63,45 +66,63 @@ public class GrupoAdapter extends RecyclerView.Adapter<GrupoAdapter.GrupoViewHol
         ImageView ivGrupoFoto;
         TextView tvNombreGrupo;
         TextView tvCantidadMiembros;
+        TextView tvCreadorGrupo;
 
         public GrupoViewHolder(@NonNull View itemView) {
             super(itemView);
             ivGrupoFoto = itemView.findViewById(R.id.ivGrupoFoto);
             tvNombreGrupo = itemView.findViewById(R.id.tvNombreGrupo);
             tvCantidadMiembros = itemView.findViewById(R.id.tvCantidadMiembros);
+            tvCreadorGrupo = itemView.findViewById(R.id.tvCreadorGrupo);
         }
 
         public void bind(Grupo grupo) {
             tvNombreGrupo.setText(grupo.getNomGrupo());
-            grupoRepository.obtenerCantidadMiembros(
-                    grupo.getId(),
-                    new FirestoreCallback<Integer>() {
+            tvCreadorGrupo.setText("");
 
+            // Member count
+            grupoRepository.obtenerCantidadMiembros(grupo.getId(),
+                    new FirestoreCallback<Integer>() {
                         @Override
                         public void onSuccess(Integer resultado) {
-
                             tvCantidadMiembros.setText(
-                                    resultado + " miembro" +
-                                            (resultado != 1 ? "s" : "")
+                                    resultado + " miembro" + (resultado != 1 ? "s" : "")
                             );
                         }
-
                         @Override
                         public void onFailure(String error) {
-
-                            tvCantidadMiembros.setText(
-                                    "0 miembros"
-                            );
+                            tvCantidadMiembros.setText("0 miembros");
                         }
                     });
+
+            // Creator username
+            if (grupo.getUidCreador() != null) {
+                usuarioRepository.obtenerUsuario(grupo.getUidCreador(),
+                        new FirestoreCallback<Usuario>() {
+                            @Override
+                            public void onSuccess(Usuario usuario) {
+                                if (usuario.getUsername() != null) {
+                                    tvCreadorGrupo.setText(
+                                            itemView.getContext().getString(R.string.grupo_creado_por)
+                                                    + "@" + usuario.getUsername()
+                                    );
+                                }
+                            }
+                            @Override
+                            public void onFailure(String error) {
+                                Log.w("GrupoAdapter", "No se pudo obtener creador: " + error);
+                            }
+                        });
+            }
+
+            // Group image
             String fotoUrl = grupo.getFotoGrupoUrl();
             Log.d("DEBUG_IMAGEN", "Grupo: " + grupo.getNomGrupo());
             Log.d("DEBUG_IMAGEN", "URL: " + (fotoUrl != null ? fotoUrl : "NULL"));
 
-            // Cargar imagen con Glide
-            if (grupo.getFotoGrupoUrl() != null && !grupo.getFotoGrupoUrl().isEmpty()) {
+            if (fotoUrl != null && !fotoUrl.isEmpty()) {
                 Glide.with(itemView.getContext())
-                        .load(grupo.getFotoGrupoUrl())
+                        .load(fotoUrl)
                         .placeholder(android.R.drawable.ic_menu_gallery)
                         .into(ivGrupoFoto);
             } else {
@@ -109,9 +130,7 @@ public class GrupoAdapter extends RecyclerView.Adapter<GrupoAdapter.GrupoViewHol
             }
 
             itemView.setOnClickListener(v -> {
-                if (listener != null) {
-                    listener.onGrupoClick(grupo);
-                }
+                if (listener != null) listener.onGrupoClick(grupo);
             });
         }
     }

@@ -60,6 +60,7 @@ public class AuthService {
                             if (firebaseUser != null) {
                                 String uid = firebaseUser.getUid();
                                 usuario.setUid(uid);
+                                usuario.setEmail(email);
 
                                 // Guardar datos del usuario en Firestore
                                 usuarioRepository.crearUsuario(usuario, new FirestoreCallback<Usuario>() {
@@ -94,10 +95,10 @@ public class AuthService {
         });
     }
 
-    // Inicia sesión con email y contraseña
-    public void iniciarSesion(String email, String password, AuthCallback callback) {
-        if (email == null || email.isEmpty()) {
-            if (callback != null) callback.onFailure("El email es obligatorio");
+    // Inicia sesión con email o nombre de usuario y contraseña
+    public void iniciarSesion(String identificador, String password, AuthCallback callback) {
+        if (identificador == null || identificador.isEmpty()) {
+            if (callback != null) callback.onFailure("El campo de acceso es obligatorio");
             return;
         }
 
@@ -106,6 +107,27 @@ public class AuthService {
             return;
         }
 
+        // Si contiene '@' es un email; si no, es un nombre de usuario
+        if (identificador.contains("@")) {
+            loginConEmail(identificador, password, callback);
+        } else {
+            usuarioRepository.obtenerEmailPorUsername(identificador, new FirestoreCallback<String>() {
+                @Override
+                public void onSuccess(String email) {
+                    loginConEmail(email, password, callback);
+                }
+
+                @Override
+                public void onFailure(String error) {
+                    Log.e(TAG, "Username no encontrado: " + error);
+                    if (callback != null) callback.onFailure("Nombre de usuario no encontrado");
+                }
+            });
+        }
+    }
+
+    // Realiza el inicio de sesión en Firebase Auth con email
+    private void loginConEmail(String email, String password, AuthCallback callback) {
         mAuth.signInWithEmailAndPassword(email, password)
                 .addOnSuccessListener(authResult -> {
                     FirebaseUser firebaseUser = authResult.getUser();

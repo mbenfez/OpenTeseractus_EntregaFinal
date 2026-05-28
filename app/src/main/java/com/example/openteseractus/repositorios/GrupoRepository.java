@@ -106,7 +106,22 @@ public class GrupoRepository {
                     if (idsGrupos.isEmpty()) {
                         callback.onSuccess(new ArrayList<>());
                     } else {
-                        obtenerGruposPorIds(idsGrupos, callback);
+                        obtenerGruposPorIds(idsGrupos, new FirestoreCallback<List<Grupo>>() {
+                            @Override
+                            public void onSuccess(List<Grupo> grupos) {
+                                // Restore the ultimaActividad order from the ref query
+                                grupos.sort((a, b) -> {
+                                    int ia = idsGrupos.indexOf(a.getId());
+                                    int ib = idsGrupos.indexOf(b.getId());
+                                    return Integer.compare(ia, ib);
+                                });
+                                callback.onSuccess(grupos);
+                            }
+                            @Override
+                            public void onFailure(String error) {
+                                callback.onFailure(error);
+                            }
+                        });
                     }
                 })
                 .addOnFailureListener(e -> callback.onFailure(e.getMessage()));
@@ -291,6 +306,17 @@ public class GrupoRepository {
         }
 
         return codigo.toString();
+    }
+
+    // Actualiza el timestamp de última actividad del usuario en el grupo
+    public void actualizarUltimaActividad(String uid, String idGrupo) {
+        db.collection("usuarios")
+                .document(uid)
+                .collection("grupos")
+                .document(idGrupo)
+                .update("ultimaActividad", System.currentTimeMillis())
+                .addOnFailureListener(e ->
+                        Log.e(TAG, "Error al actualizar ultimaActividad: " + e.getMessage()));
     }
 
     // Regenera el código de invitación de un grupo
