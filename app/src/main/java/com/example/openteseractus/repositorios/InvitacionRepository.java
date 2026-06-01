@@ -4,6 +4,7 @@ import com.example.openteseractus.callbacks.FirestoreCallback;
 import com.example.openteseractus.modelos.Invitacion;
 import com.example.openteseractus.modelos.MiembroGrupo;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.WriteBatch;
 
 import java.util.List;
@@ -25,6 +26,21 @@ public class InvitacionRepository {
                         callback.onSuccess(null))
                 .addOnFailureListener(e ->
                         callback.onFailure(e.getMessage()));
+    }
+
+    public ListenerRegistration escucharInvitaciones(String uid, FirestoreCallback<List<Invitacion>> callback) {
+        return db.collection("usuarios")
+                .document(uid)
+                .collection("invitacionesGrupo")
+                .addSnapshotListener((snapshot, error) -> {
+                    if (error != null) {
+                        callback.onFailure(error.getMessage());
+                        return;
+                    }
+                    if (snapshot != null) {
+                        callback.onSuccess(snapshot.toObjects(Invitacion.class));
+                    }
+                });
     }
 
     public void obtenerInvitaciones(String uid, FirestoreCallback<List<Invitacion>> callback) {

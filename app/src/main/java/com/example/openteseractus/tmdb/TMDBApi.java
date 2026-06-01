@@ -18,13 +18,15 @@ public interface TMDBApi {
     Call<TMDBDetalle> obtenerPelicula(
             @Path("id") int id,
             @Query("api_key") String apiKey,
-            @Query("language") String language
+            @Query("language") String language,
+            @Query("append_to_response") String appendToResponse
     );
 
     @GET("tv/{id}")
     Call<TMDBDetalle> obtenerSerie(
             @Path("id") int id,
             @Query("api_key") String apiKey,
-            @Query("language") String language
+            @Query("language") String language,
+            @Query("append_to_response") String appendToResponse
     );
 }

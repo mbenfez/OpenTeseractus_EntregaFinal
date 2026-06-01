@@ -5,6 +5,7 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.SeekBar;
@@ -23,8 +24,12 @@ import com.bumptech.glide.Glide;
 import com.example.openteseractus.R;
 import com.example.openteseractus.callbacks.FirestoreCallback;
 import com.example.openteseractus.modelos.Teseracto;
+import com.example.openteseractus.modelos.Usuario;
 import com.example.openteseractus.modelos.Valoracion;
+import com.example.openteseractus.modelos.MiembroGrupo;
+import com.example.openteseractus.repositorios.GrupoRepository;
 import com.example.openteseractus.repositorios.TeseractoRepository;
+import com.example.openteseractus.repositorios.UsuarioRepository;
 import com.example.openteseractus.repositorios.ValoracionRepository;
 import com.example.openteseractus.tmdb.TMDBDetalle;
 import com.example.openteseractus.tmdb.TMDBRepository;
@@ -38,10 +43,18 @@ import java.util.Locale;
 
 public class TeseractoActivity extends AppCompatActivity {
 
+    private static String formatNota(double nota) {
+        if (nota == Math.floor(nota) && nota >= 0 && nota <= 10) {
+            return String.valueOf((int) nota);
+        }
+        return String.format(Locale.getDefault(), "%.1f", nota);
+    }
+
     private ImageView imgPoster, imgBackdrop;
-    private TextView tvTitulo, tvInfo, tvSinopsis, tvHeaderSinopsis;
+    private TextView tvTitulo, tvInfo, tvAnio, tvDirector, tvSinopsis, tvHeaderSinopsis, tvAbiertosPor;
     private Chip chipNotaGrupo, chipNotaTMDB, chipNotaUser;
     private MaterialButton btnChat;
+    private ImageButton btnEliminar;
     private Toolbar toolbar;
     private CollapsingToolbarLayout collapsingToolbar;
     private ValoracionRepository valoracionRepository;
@@ -50,6 +63,8 @@ public class TeseractoActivity extends AppCompatActivity {
 
     private TeseractoRepository teseractoRepository;
     private TMDBRepository tmdbRepository;
+    private GrupoRepository grupoRepository;
+    private UsuarioRepository usuarioRepository;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -74,6 +89,8 @@ public class TeseractoActivity extends AppCompatActivity {
         teseractoRepository = new TeseractoRepository();
         valoracionRepository = new ValoracionRepository();
         tmdbRepository = new TMDBRepository();
+        grupoRepository = new GrupoRepository();
+        usuarioRepository = new UsuarioRepository();
 
         inicializarVistas();
         cargarTeseracto();
@@ -81,20 +98,24 @@ public class TeseractoActivity extends AppCompatActivity {
 
     private void inicializarVistas() {
 
-        imgPoster = findViewById(R.id.imgPoster);
-        imgBackdrop = findViewById(R.id.imgBackdrop);
+        imgPoster    = findViewById(R.id.imgPoster);
+        imgBackdrop  = findViewById(R.id.imgBackdrop);
 
-        tvTitulo = findViewById(R.id.tvTitulo);
-        tvInfo = findViewById(R.id.tvInfo);
-        tvSinopsis = findViewById(R.id.tvSinopsis);
+        tvTitulo         = findViewById(R.id.tvTitulo);
+        tvAnio           = findViewById(R.id.tvAnio);
+        tvInfo           = findViewById(R.id.tvInfo);
+        tvDirector       = findViewById(R.id.tvDirector);
+        tvSinopsis       = findViewById(R.id.tvSinopsis);
         tvHeaderSinopsis = findViewById(R.id.tvHeaderSinopsis);
+        tvAbiertosPor    = findViewById(R.id.tvAbiertosPor);
 
         chipNotaGrupo = findViewById(R.id.chipNotaGrupo);
-        chipNotaTMDB = findViewById(R.id.chipTmdb);
-        chipNotaUser = findViewById(R.id.chipUser);
-        btnChat = findViewById(R.id.btnChat);
+        chipNotaTMDB  = findViewById(R.id.chipTmdb);
+        chipNotaUser  = findViewById(R.id.chipUser);
+        btnChat       = findViewById(R.id.btnChat);
+        btnEliminar   = findViewById(R.id.btnEliminar);
 
-        toolbar = findViewById(R.id.toolbar);
+        toolbar           = findViewById(R.id.toolbar);
         collapsingToolbar = findViewById(R.id.collapsingToolbar);
 
         chipNotaUser.setOnClickListener(v -> mostrarBottomSheetValoracion());
@@ -111,8 +132,9 @@ public class TeseractoActivity extends AppCompatActivity {
 
                         cargarNotaGrupo();
                         cargarNotaUsuario();
-
                         cargarDetalleTMDB(teseracto);
+                        cargarInfoApertura(teseracto);
+                        verificarPuedeEliminar(teseracto);
 
                         btnChat.setOnClickListener(v -> {
                             Intent intent = new Intent(
@@ -147,40 +169,46 @@ public class TeseractoActivity extends AppCompatActivity {
                         runOnUiThread(() -> {
                             collapsingToolbar.setTitle(detalle.getTitulo());
                             tvTitulo.setText(detalle.getTitulo());
-                            if (!detalle.getSinopsis().isEmpty())
+                            if (detalle.getSinopsis() != null && !detalle.getSinopsis().isEmpty())
                                 tvSinopsis.setText(detalle.getSinopsis());
                             else
                                 tvHeaderSinopsis.setText("");
 
                             Glide.with(TeseractoActivity.this)
                                     .load(detalle.getPosterUrl())
+                                    .placeholder(R.drawable.placeholder_poster)
+                                    .error(R.drawable.placeholder_poster)
                                     .into(imgPoster);
                             Glide.with(TeseractoActivity.this)
                                     .load(detalle.getBackdropUrl())
+                                    .placeholder(R.drawable.placeholder_backdrop)
+                                    .error(R.drawable.placeholder_backdrop)
                                     .into(imgBackdrop);
 
-                            chipNotaTMDB.setText(
-                                    String.format(
-                                            Locale.getDefault(),
-                                            "%.1f",
-                                            detalle.getVoteAverage()
-                                    )
-                            );
+                            chipNotaTMDB.setText(formatNota(detalle.getVoteAverage()));
+
+                            // Año separado de duración
+                            String anio = detalle.getFechaSalida();
+                            tvAnio.setText(anio != null && !anio.isEmpty() ? anio : "");
+                            tvAnio.setVisibility(anio != null && !anio.isEmpty() ? View.VISIBLE : View.GONE);
 
                             if ("movie".equals(detalle.getMediaType())) {
-                                tvInfo.setText(detalle.getFechaSalida()
-                                        + " • "
-                                        + detalle.getRuntime()
-                                        + " min"
-                                );
+                                tvInfo.setText(detalle.getRuntime() > 0 ? detalle.getRuntime() + " min" : "");
                             } else {
-                                tvInfo.setText(detalle.getFechaSalida()
-                                        + " • "
-                                        + detalle.getTemporadas()
+                                tvInfo.setText(detalle.getTemporadas()
                                         + getString(R.string.detail_seasons)
                                         + detalle.getEpisodios()
-                                        + getString(R.string.detail_episodes)
-                                );
+                                        + getString(R.string.detail_episodes));
+                            }
+
+                            // Director / Creador
+                            String director = detalle.getDirectorOCreador();
+                            if (director != null && !director.isEmpty()) {
+                                tvDirector.setText("movie".equals(detalle.getMediaType())
+                                        ? "Dir. " + director : "Crea. " + director);
+                                tvDirector.setVisibility(View.VISIBLE);
+                            } else {
+                                tvDirector.setVisibility(View.GONE);
                             }
                         });
                     }
@@ -207,12 +235,7 @@ public class TeseractoActivity extends AppCompatActivity {
                             if (media <= 0) {
                                 chipNotaGrupo.setText("-");
                             } else {
-                                chipNotaGrupo.setText(
-                                        String.format(
-                                                Locale.getDefault(),
-                                                "%.1f", media
-                                        )
-                                );
+                                chipNotaGrupo.setText(formatNota(media));
                             }
                         });
                     }
@@ -241,13 +264,7 @@ public class TeseractoActivity extends AppCompatActivity {
                                 chipNotaUser.setText("-");
                                 return;
                             }
-
-                            chipNotaUser.setText(
-                                    String.format(
-                                            Locale.getDefault(), "%.1f",
-                                            valoracion.getPuntuacion()
-                                    )
-                            );
+                            chipNotaUser.setText(formatNota(valoracion.getPuntuacion()));
                         });
                     }
 
@@ -270,6 +287,11 @@ public class TeseractoActivity extends AppCompatActivity {
             view.setBackgroundColor(
                     ContextCompat.getColor(this, R.color.surface)
             );
+        }
+
+        TextView tvTituloValoracion = view.findViewById(R.id.tvTituloValoracion);
+        if (teseractoActual != null && teseractoActual.getTitulo() != null) {
+            tvTituloValoracion.setText(getString(R.string.title_rating) + teseractoActual.getTitulo());
         }
 
         SeekBar seekGeneral = view.findViewById(R.id.seekGeneral);
@@ -350,13 +372,7 @@ public class TeseractoActivity extends AppCompatActivity {
                             boolean fromUser
                     ) {
                         double nota = progress / 10.0;
-                        tvGeneral.setText(
-                                String.format(
-                                        Locale.getDefault(),
-                                        "%.1f",
-                                        nota
-                                )
-                        );
+                        tvGeneral.setText(formatNota(nota));
                     }
 
                     @Override
@@ -442,21 +458,8 @@ public class TeseractoActivity extends AppCompatActivity {
                                                         public void onSuccess(Void resultado) {
 
                                                             runOnUiThread(() -> {
-                                                                chipNotaUser.setText(
-                                                                        String.format(
-                                                                                Locale.getDefault(),
-                                                                                "%.1f",
-                                                                                finalNotaGeneral
-                                                                        )
-                                                                );
-
-                                                                chipNotaGrupo.setText(
-                                                                        String.format(
-                                                                                Locale.getDefault(),
-                                                                                "%.1f",
-                                                                                media
-                                                                        )
-                                                                );
+                                                                chipNotaUser.setText(formatNota(finalNotaGeneral));
+                                                                chipNotaGrupo.setText(formatNota(media));
 
                                                                 Toast.makeText(
                                                                         TeseractoActivity.this,
@@ -510,6 +513,79 @@ public class TeseractoActivity extends AppCompatActivity {
         dialog.show();
     }
 
+    private void cargarInfoApertura(Teseracto teseracto) {
+        String uid = teseracto.getUidAbiertoPor();
+        if (uid == null || uid.isEmpty()) return;
+
+        usuarioRepository.obtenerUsuario(uid, new FirestoreCallback<Usuario>() {
+            @Override
+            public void onSuccess(Usuario usuario) {
+                runOnUiThread(() -> {
+                    String fecha = new java.text.SimpleDateFormat("dd/MM/yyyy",
+                            java.util.Locale.getDefault()).format(
+                            new java.util.Date(teseracto.getFechaApertura()));
+                    tvAbiertosPor.setText(usuario.getUsername() + "\n" + fecha);
+                    tvAbiertosPor.setVisibility(View.VISIBLE);
+                });
+            }
+
+            @Override
+            public void onFailure(String error) {}
+        });
+    }
+
+    private void verificarPuedeEliminar(Teseracto teseracto) {
+        String uidActual = com.google.firebase.auth.FirebaseAuth.getInstance()
+                .getCurrentUser().getUid();
+
+        // El creador siempre puede eliminar
+        if (uidActual.equals(teseracto.getUidAbiertoPor())) {
+            mostrarBotonEliminar(teseracto);
+            return;
+        }
+
+        // También los admin del grupo
+        grupoRepository.obtenerMiembrosGrupo(teseracto.getIdGrupo(),
+                new FirestoreCallback<java.util.List<com.example.openteseractus.modelos.MiembroGrupo>>() {
+                    @Override
+                    public void onSuccess(java.util.List<MiembroGrupo> miembros) {
+                        for (MiembroGrupo m : miembros) {
+                            if (uidActual.equals(m.getUidMiembro()) && m.esAdmin()) {
+                                runOnUiThread(() -> mostrarBotonEliminar(teseracto));
+                                return;
+                            }
+                        }
+                    }
+
+                    @Override
+                    public void onFailure(String error) {}
+                });
+    }
+
+    private void mostrarBotonEliminar(Teseracto teseracto) {
+        btnEliminar.setVisibility(View.VISIBLE);
+        btnEliminar.setOnClickListener(v ->
+                new androidx.appcompat.app.AlertDialog.Builder(this)
+                        .setTitle("Eliminar teseracto")
+                        .setMessage("¿Seguro que quieres eliminar \"" + teseracto.getTitulo() + "\"?")
+                        .setPositiveButton("Eliminar", (d, w) ->
+                                teseractoRepository.eliminarTeseracto(teseractoId,
+                                        new FirestoreCallback<Void>() {
+                                            @Override
+                                            public void onSuccess(Void result) {
+                                                finish();
+                                            }
+
+                                            @Override
+                                            public void onFailure(String error) {
+                                                runOnUiThread(() -> Toast.makeText(
+                                                        TeseractoActivity.this, error, Toast.LENGTH_SHORT).show());
+                                            }
+                                        }))
+                        .setNegativeButton("Cancelar", null)
+                        .show());
+    }
+
     private void configurarSeekBar(
             SeekBar seekBar,
             TextView textView,
@@ -538,13 +614,7 @@ public class TeseractoActivity extends AppCompatActivity {
                         }
 
                         double nota = progress / 10.0;
-                        textView.setText(
-                                String.format(
-                                        Locale.getDefault(),
-                                        "%.1f",
-                                        nota
-                                )
-                        );
+                        textView.setText(formatNota(nota));
 
                         actualizarNotaGeneral(
                                 seekGeneral,
@@ -601,11 +671,6 @@ public class TeseractoActivity extends AppCompatActivity {
 
         double media = suma / total;
         seekGeneral.setProgress((int) (media * 10));
-        tvGeneral.setText(
-                String.format(
-                        Locale.getDefault(),
-                        "%.1f", media
-                )
-        );
+        tvGeneral.setText(formatNota(media));
     }
 }

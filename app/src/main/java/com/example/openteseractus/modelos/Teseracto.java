@@ -1,5 +1,8 @@
 package com.example.openteseractus.modelos;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class Teseracto {
 
     private String id;
@@ -16,6 +19,7 @@ public class Teseracto {
 
     private long fechaApertura;
     private long ultimaActividad;
+    private List<String> participantes = new ArrayList<>();
 
     public Teseracto() {}
 
@@ -85,4 +89,7 @@ public class Teseracto {
 
     public long getUltimaActividad() { return ultimaActividad; }
     public void setUltimaActividad(long ultimaActividad) { this.ultimaActividad = ultimaActividad; }
+
+    public List<String> getParticipantes() { return participantes; }
+    public void setParticipantes(List<String> participantes) { this.participantes = participantes; }
 }

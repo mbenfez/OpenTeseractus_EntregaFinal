@@ -12,20 +12,31 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
 import com.example.openteseractus.R;
+import com.example.openteseractus.callbacks.FirestoreCallback;
 import com.example.openteseractus.modelos.Teseracto;
+import com.example.openteseractus.modelos.Usuario;
+import com.example.openteseractus.repositorios.MensajeRepository;
+import com.example.openteseractus.repositorios.UsuarioRepository;
 import com.example.openteseractus.ui.ventanas.TeseractoActivity;
 
-import java.text.SimpleDateFormat;
-import java.util.Date;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
+import java.util.Map;
 
 public class TeseractoAdapter extends RecyclerView.Adapter<TeseractoAdapter.ViewHolder> {
 
     private List<Teseracto> teseractos;
+    private List<Teseracto> todosLosTeseractos = new ArrayList<>();
+    private final UsuarioRepository usuarioRepository = new UsuarioRepository();
+    private final MensajeRepository mensajeRepository = new MensajeRepository();
+    private final Map<String, String> nombresCache = new HashMap<>();
+    private final Map<String, Integer> noLeidosCache = new HashMap<>();
+    private final String uidActual;
 
-    public TeseractoAdapter(List<Teseracto> teseractos) {
+    public TeseractoAdapter(List<Teseracto> teseractos, String uidActual) {
         this.teseractos = teseractos;
+        this.uidActual = uidActual;
     }
 
     @NonNull
@@ -38,33 +49,85 @@ public class TeseractoAdapter extends RecyclerView.Adapter<TeseractoAdapter.View
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-
         Teseracto t = teseractos.get(position);
 
+        holder.tvBadgeNoLeidos.setVisibility(View.GONE);
         holder.tvTitulo.setText(t.getTitulo());
 
         if (t.getNotaMedia() != 0) {
-            holder.tvNota.setText(String.format("%s/10", t.getNotaMedia()));
+            double nota = t.getNotaMedia();
+            String notaStr = nota == Math.floor(nota)
+                    ? String.valueOf((int) nota)
+                    : String.format("%.1f", nota);
+            holder.tvNota.setText(notaStr + "/10");
         } else {
             holder.tvNota.setText("· /10");
         }
 
+        // Opener username
+        String uid = t.getUidAbiertoPor();
+        if (uid != null && !uid.isEmpty()) {
+            if (nombresCache.containsKey(uid)) {
+                holder.tvAbiertosPor.setText("↪ " + nombresCache.get(uid));
+                holder.tvAbiertosPor.setVisibility(View.VISIBLE);
+            } else {
+                holder.tvAbiertosPor.setVisibility(View.GONE);
+                usuarioRepository.obtenerUsuario(uid, new FirestoreCallback<Usuario>() {
+                    @Override
+                    public void onSuccess(Usuario usuario) {
+                        nombresCache.put(uid, usuario.getUsername());
+                        holder.tvAbiertosPor.post(() -> {
+                            holder.tvAbiertosPor.setText("↪ " + usuario.getUsername());
+                            holder.tvAbiertosPor.setVisibility(View.VISIBLE);
+                        });
+                    }
+
+                    @Override
+                    public void onFailure(String error) {}
+                });
+            }
+        } else {
+            holder.tvAbiertosPor.setVisibility(View.GONE);
+        }
+
         Glide.with(holder.itemView.getContext())
                 .load(t.getPosterUrl())
-                .placeholder(R.drawable.bg_rounded_border)
-                .error(R.drawable.bg_rounded_border)
+                .placeholder(R.drawable.placeholder_poster)
+                .error(R.drawable.placeholder_poster)
                 .centerCrop()
                 .into(holder.imgPoster);
 
-        holder.itemView.setOnClickListener(v -> {
+        if (uidActual != null && t.getId() != null) {
+            String tid = t.getId();
+            if (noLeidosCache.containsKey(tid)) {
+                mostrarBadge(holder.tvBadgeNoLeidos, noLeidosCache.get(tid));
+            } else {
+                mensajeRepository.contarNoLeidos(uidActual, tid, new FirestoreCallback<Integer>() {
+                    @Override
+                    public void onSuccess(Integer count) {
+                        noLeidosCache.put(tid, count);
+                        holder.tvBadgeNoLeidos.post(() -> mostrarBadge(holder.tvBadgeNoLeidos, count));
+                    }
+                    @Override
+                    public void onFailure(String error) {}
+                });
+            }
+        }
 
-            Intent intent = new Intent(
-                    holder.itemView.getContext(),
-                    TeseractoActivity.class
-            );
+        holder.itemView.setOnClickListener(v -> {
+            Intent intent = new Intent(holder.itemView.getContext(), TeseractoActivity.class);
             intent.putExtra("TESERACTO_ID", t.getId());
             holder.itemView.getContext().startActivity(intent);
         });
+    }
+
+    private void mostrarBadge(TextView badge, int count) {
+        if (count > 0) {
+            badge.setText(count > 99 ? "99+" : String.valueOf(count));
+            badge.setVisibility(View.VISIBLE);
+        } else {
+            badge.setVisibility(View.GONE);
+        }
     }
 
     @Override
@@ -73,22 +136,41 @@ public class TeseractoAdapter extends RecyclerView.Adapter<TeseractoAdapter.View
     }
 
     public void update(List<Teseracto> nuevos) {
+        todosLosTeseractos.clear();
+        todosLosTeseractos.addAll(nuevos);
         teseractos.clear();
         teseractos.addAll(nuevos);
+        noLeidosCache.clear();
+        notifyDataSetChanged();
+    }
+
+    public void filtrar(String query) {
+        teseractos.clear();
+        if (query == null || query.trim().isEmpty()) {
+            teseractos.addAll(todosLosTeseractos);
+        } else {
+            String lower = query.toLowerCase();
+            for (Teseracto t : todosLosTeseractos) {
+                if (t.getTitulo() != null && t.getTitulo().toLowerCase().contains(lower)) {
+                    teseractos.add(t);
+                }
+            }
+        }
         notifyDataSetChanged();
     }
 
     static class ViewHolder extends RecyclerView.ViewHolder {
 
-        TextView tvTitulo, tvNota, tvFecha;
+        TextView tvTitulo, tvNota, tvAbiertosPor, tvBadgeNoLeidos;
         ImageView imgPoster;
 
-        public ViewHolder(@NonNull View itemView) {
+        ViewHolder(@NonNull View itemView) {
             super(itemView);
-
-            tvTitulo = itemView.findViewById(R.id.tvTitulo);
-            tvNota = itemView.findViewById(R.id.tvNota);
-            imgPoster = itemView.findViewById(R.id.imgPoster);
+            tvTitulo        = itemView.findViewById(R.id.tvTitulo);
+            tvNota          = itemView.findViewById(R.id.tvNota);
+            imgPoster       = itemView.findViewById(R.id.imgPoster);
+            tvAbiertosPor   = itemView.findViewById(R.id.tvAbiertosPor);
+            tvBadgeNoLeidos = itemView.findViewById(R.id.tvBadgeNoLeidos);
         }
     }
 }

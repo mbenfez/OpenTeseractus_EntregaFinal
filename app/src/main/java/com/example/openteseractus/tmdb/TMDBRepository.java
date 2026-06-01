@@ -54,9 +54,9 @@ public class TMDBRepository {
         Call<TMDBDetalle> call;
 
         if ("movie".equals(mediaType)) {
-            call = api.obtenerPelicula(tmdbId, API_KEY, "es-ES");
+            call = api.obtenerPelicula(tmdbId, API_KEY, "es-ES", "credits");
         } else {
-            call = api.obtenerSerie(tmdbId, API_KEY, "es-ES");
+            call = api.obtenerSerie(tmdbId, API_KEY, "es-ES", "credits");
         }
 
         call.enqueue(new Callback<TMDBDetalle>() {

@@ -1,6 +1,5 @@
 package com.example.openteseractus.ui.auth;
 
-import android.content.Intent;
 import android.os.Bundle;
 import android.widget.Button;
 import android.widget.EditText;
@@ -17,9 +16,6 @@ import com.example.openteseractus.R;
 import com.example.openteseractus.callbacks.AuthCallback;
 import com.example.openteseractus.modelos.Usuario;
 import com.example.openteseractus.servicios.AuthService;
-import com.example.openteseractus.ui.MainActivity;
-import com.example.openteseractus.ui.ventanas.HomeActivity;
-
 import java.util.Date;
 
 public class RegisterActivity extends AppCompatActivity {
@@ -74,22 +70,8 @@ public class RegisterActivity extends AppCompatActivity {
             @Override
             public void onSuccess(Usuario usuario) {
                 runOnUiThread(() -> {
-                    Toast.makeText(RegisterActivity.this, "Usuario registrado", Toast.LENGTH_SHORT).show();
-
-                    authService.iniciarSesion(email, password, new AuthCallback() {
-                        @Override
-                        public void onSuccess(Usuario usuario) {
-                            startActivity(new Intent(RegisterActivity.this, HomeActivity.class));
-                            finish();
-                        }
-
-                        @Override
-                        public void onFailure(String error) {
-                            runOnUiThread(() ->
-                                    Toast.makeText(RegisterActivity.this, error, Toast.LENGTH_LONG).show()
-                            );
-                        }
-                    });
+                    Toast.makeText(RegisterActivity.this, getString(R.string.verify_email_sent), Toast.LENGTH_LONG).show();
+                    finish();
                 });
             }
 

@@ -1,5 +1,6 @@
 package com.example.openteseractus.adapters;
 
+import android.graphics.Color;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -16,16 +17,31 @@ import com.example.openteseractus.modelos.MiembroGrupo;
 import com.example.openteseractus.modelos.Usuario;
 import com.example.openteseractus.repositorios.UsuarioRepository;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class MiembroAdapter extends RecyclerView.Adapter<MiembroAdapter.ViewHolder> {
 
-    private List<MiembroGrupo> miembros;
-    private UsuarioRepository usuarioRepository;
+    public interface OnMiembroLongClickListener {
+        void onLongClick(MiembroGrupo miembro, String username);
+    }
 
-    public MiembroAdapter(List<MiembroGrupo> miembros) {
-        this.miembros = miembros;
-        this.usuarioRepository = new UsuarioRepository();
+    private List<MiembroGrupo> miembros;
+    private List<MiembroGrupo> todosMiembros = new ArrayList<>();
+    private final Map<String, String> usernameCache = new HashMap<>();
+    private final String uidActual;
+    private OnMiembroLongClickListener longClickListener;
+    private final UsuarioRepository usuarioRepository = new UsuarioRepository();
+
+    public MiembroAdapter(List<MiembroGrupo> miembros, String uidActual) {
+        this.miembros   = miembros;
+        this.uidActual  = uidActual;
+    }
+
+    public void setOnMiembroLongClickListener(OnMiembroLongClickListener listener) {
+        this.longClickListener = listener;
     }
 
     @NonNull
@@ -39,38 +55,52 @@ public class MiembroAdapter extends RecyclerView.Adapter<MiembroAdapter.ViewHold
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         MiembroGrupo miembro = miembros.get(position);
+        boolean esMiActual = miembro.getUidMiembro() != null
+                && miembro.getUidMiembro().equals(uidActual);
 
         holder.tvRol.setText(miembro.getRol());
-        holder.tvNombre.setText("Cargando...");
-
-        // Estado por defecto (gris mientras carga)
+        holder.tvNombre.setText("Cargando…");
         holder.viewEstado.setBackgroundResource(R.drawable.circle_gray);
 
-        usuarioRepository.obtenerUsuario(miembro.getUidMiembro(),
-                new FirestoreCallback<Usuario>() {
-                    @Override
-                    public void onSuccess(Usuario usuario) {
+        // Highlight current user
+        if (esMiActual) {
+            holder.tvNombre.setTextColor(
+                    holder.itemView.getContext().getResources().getColor(R.color.primary, null));
+        } else {
+            holder.tvNombre.setTextColor(
+                    holder.itemView.getContext().getResources().getColor(R.color.onSurface, null));
+        }
 
-                        holder.tvNombre.setText(usuario.getUsername());
-                        Glide.with(holder.itemView.getContext())
-                                .load(usuario.getFotoPerfilUrl())
-                                .placeholder(R.drawable.pfp_placeholder)
-                                .error(R.drawable.pfp_placeholder)
-                                .circleCrop()
-                                .into(holder.fotoPerf);
+        usuarioRepository.obtenerUsuario(miembro.getUidMiembro(), new FirestoreCallback<Usuario>() {
+            @Override
+            public void onSuccess(Usuario usuario) {
+                usernameCache.put(miembro.getUidMiembro(), usuario.getUsername());
+                holder.tvNombre.setText(usuario.getUsername());
 
-                        if (usuario.isActivo()) {
-                            holder.viewEstado.setBackgroundResource(R.drawable.circle_blue);
-                        } else {
-                            holder.viewEstado.setBackgroundResource(R.drawable.circle_gray);
-                        }
-                    }
+                Glide.with(holder.itemView.getContext())
+                        .load(usuario.getFotoPerfilUrl())
+                        .placeholder(R.drawable.pfp_placeholder)
+                        .error(R.drawable.pfp_placeholder)
+                        .circleCrop()
+                        .into(holder.fotoPerf);
 
-                    @Override
-                    public void onFailure(String error) {
-                        holder.tvNombre.setText("Error");
-                    }
-                });
+                holder.viewEstado.setBackgroundResource(
+                        usuario.isActivo() ? R.drawable.circle_blue : R.drawable.circle_gray);
+
+                // Long press: admin actions (only for non-self members)
+                if (longClickListener != null && !esMiActual) {
+                    holder.itemView.setOnLongClickListener(v -> {
+                        longClickListener.onLongClick(miembro, usuario.getUsername());
+                        return true;
+                    });
+                }
+            }
+
+            @Override
+            public void onFailure(String error) {
+                holder.tvNombre.setText("Error");
+            }
+        });
     }
 
     @Override
@@ -79,24 +109,52 @@ public class MiembroAdapter extends RecyclerView.Adapter<MiembroAdapter.ViewHold
     }
 
     public void update(List<MiembroGrupo> nuevos) {
+        todosMiembros.clear();
+        todosMiembros.addAll(nuevos);
         miembros.clear();
         miembros.addAll(nuevos);
+        notifyDataSetChanged();
+        // Precargar usernames en caché para poder filtrar
+        for (MiembroGrupo m : nuevos) {
+            if (!usernameCache.containsKey(m.getUidMiembro())) {
+                usuarioRepository.obtenerUsuario(m.getUidMiembro(), new FirestoreCallback<Usuario>() {
+                    @Override
+                    public void onSuccess(Usuario usuario) {
+                        usernameCache.put(m.getUidMiembro(), usuario.getUsername());
+                    }
+                    @Override
+                    public void onFailure(String error) {}
+                });
+            }
+        }
+    }
+
+    public void filtrar(String query) {
+        miembros.clear();
+        if (query == null || query.trim().isEmpty()) {
+            miembros.addAll(todosMiembros);
+        } else {
+            String q = query.trim().toLowerCase();
+            for (MiembroGrupo m : todosMiembros) {
+                String username = usernameCache.get(m.getUidMiembro());
+                if (username != null && username.toLowerCase().contains(q)) {
+                    miembros.add(m);
+                }
+            }
+        }
         notifyDataSetChanged();
     }
 
     static class ViewHolder extends RecyclerView.ViewHolder {
-
-        TextView tvNombre;
-        TextView tvRol;
+        TextView tvNombre, tvRol;
         ImageView fotoPerf;
         View viewEstado;
 
-        public ViewHolder(@NonNull View itemView) {
+        ViewHolder(@NonNull View itemView) {
             super(itemView);
-
-            tvNombre = itemView.findViewById(R.id.tvNombre);
-            tvRol = itemView.findViewById(R.id.tvRol);
-            fotoPerf = itemView.findViewById(R.id.imgUsuario);
+            tvNombre   = itemView.findViewById(R.id.tvNombre);
+            tvRol      = itemView.findViewById(R.id.tvRol);
+            fotoPerf   = itemView.findViewById(R.id.imgUsuario);
             viewEstado = itemView.findViewById(R.id.viewEstado);
         }
     }

@@ -68,9 +68,12 @@ public class LoginActivity extends AppCompatActivity {
 
             @Override
             public void onFailure(String error) {
-                runOnUiThread(() ->
-                        Toast.makeText(LoginActivity.this, error, Toast.LENGTH_LONG).show()
-                );
+                runOnUiThread(() -> {
+                    String msg = error.equals("email_not_verified")
+                            ? getString(R.string.email_not_verified)
+                            : error;
+                    Toast.makeText(LoginActivity.this, msg, Toast.LENGTH_LONG).show();
+                });
             }
         });
     }

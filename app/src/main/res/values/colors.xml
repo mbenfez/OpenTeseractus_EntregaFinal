@@ -22,4 +22,7 @@
     <color name="border">#000000</color>
     <color name="borderLight">#000000</color>
     <color name="borderAccent">#00CCFF</color>
+
+    <!-- Estados -->
+    <color name="error">#CF6679</color>
 </resources>

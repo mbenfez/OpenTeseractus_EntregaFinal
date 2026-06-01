@@ -15,7 +15,6 @@ public class Mensaje {
         this.uidAutor = uidAutor;
         this.idTeseracto = idTeseracto;
         this.contenido = contenido;
-        this.fechaEnvio = System.currentTimeMillis();
     }
 
     // ==================== MÉTODOS DE NEGOCIO ====================

@@ -66,6 +66,10 @@ public class AuthService {
                                 usuarioRepository.crearUsuario(usuario, new FirestoreCallback<Usuario>() {
                                     @Override
                                     public void onSuccess(Usuario u) {
+                                        firebaseUser.sendEmailVerification()
+                                                .addOnCompleteListener(task ->
+                                                        Log.d(TAG, "Email de verificación enviado a: " + email));
+                                        mAuth.signOut();
                                         Log.d(TAG, "Usuario registrado exitosamente: " + uid);
                                         if (callback != null) callback.onSuccess(u);
                                     }
@@ -132,6 +136,12 @@ public class AuthService {
                 .addOnSuccessListener(authResult -> {
                     FirebaseUser firebaseUser = authResult.getUser();
                     if (firebaseUser != null) {
+                        if (!firebaseUser.isEmailVerified()) {
+                            mAuth.signOut();
+                            if (callback != null) callback.onFailure("email_not_verified");
+                            return;
+                        }
+
                         String uid = firebaseUser.getUid();
 
                         // Obtener datos del usuario de Firestore
@@ -190,7 +200,9 @@ public class AuthService {
     private String parsearErrorAuth(String error) {
         if (error == null) return "Error desconocido";
 
-        if (error.contains("email address is already in use")) {
+        if (error.equals("email_not_verified")) {
+            return "email_not_verified";
+        } else if (error.contains("email address is already in use")) {
             return "Este email ya está registrado";
         } else if (error.contains("invalid email")) {
             return "Email inválido";

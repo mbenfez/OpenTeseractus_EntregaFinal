@@ -6,6 +6,8 @@ import com.example.openteseractus.callbacks.FirestoreCallback;
 import com.example.openteseractus.modelos.Grupo;
 import com.example.openteseractus.modelos.MiembroGrupo;
 import com.example.openteseractus.modelos.UsuarioGrupoRef;
+import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.WriteBatch;
@@ -278,7 +280,9 @@ public class GrupoRepository {
                 });
     }
 
-    // Elimina un miembro de un grupo
+    // Elimina un miembro de un grupo (expulsión por admin).
+    // La referencia en usuarios/{uid}/grupos/{idGrupo} la borra el propio cliente del expulsado
+    // cuando su listener de membresía detecta la eliminación de este documento.
     public void eliminarMiembro(String idGrupo, String uid, FirestoreCallback<Void> callback) {
         db.collection(COLLECTION_GRUPOS)
                 .document(idGrupo)
@@ -286,11 +290,28 @@ public class GrupoRepository {
                 .document(uid)
                 .delete()
                 .addOnSuccessListener(aVoid -> {
-                    Log.d(TAG, "Miembro eliminado del grupo: " + uid);
+                    Log.d(TAG, "Miembro expulsado del grupo: " + uid);
+                    quitarParticipanteDeTeseractosDelGrupo(idGrupo, uid, callback);
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error al expulsar miembro", e);
+                    if (callback != null) callback.onFailure(e.getMessage());
+                });
+    }
+
+    // Elimina la referencia al grupo en el propio usuario (llamado por el usuario expulsado desde su cliente)
+    public void eliminarRefGrupoDeUsuario(String uid, String idGrupo, FirestoreCallback<Void> callback) {
+        db.collection("usuarios")
+                .document(uid)
+                .collection("grupos")
+                .document(idGrupo)
+                .delete()
+                .addOnSuccessListener(aVoid -> {
+                    Log.d(TAG, "Ref de grupo eliminada para usuario: " + uid);
                     if (callback != null) callback.onSuccess(null);
                 })
                 .addOnFailureListener(e -> {
-                    Log.e(TAG, "Error al eliminar miembro", e);
+                    Log.e(TAG, "Error al eliminar ref de grupo", e);
                     if (callback != null) callback.onFailure(e.getMessage());
                 });
     }
@@ -317,6 +338,191 @@ public class GrupoRepository {
                 .update("ultimaActividad", System.currentTimeMillis())
                 .addOnFailureListener(e ->
                         Log.e(TAG, "Error al actualizar ultimaActividad: " + e.getMessage()));
+    }
+
+    public void actualizarNombreGrupo(String idGrupo, String nuevoNombre, FirestoreCallback<Void> callback) {
+        db.collection(COLLECTION_GRUPOS)
+                .document(idGrupo)
+                .update("nomGrupo", nuevoNombre)
+                .addOnSuccessListener(aVoid -> callback.onSuccess(null))
+                .addOnFailureListener(e -> callback.onFailure(e.getMessage()));
+    }
+
+    public void actualizarFotoGrupo(String idGrupo, String fotoUrl, FirestoreCallback<Void> callback) {
+        db.collection(COLLECTION_GRUPOS)
+                .document(idGrupo)
+                .update("fotoGrupoUrl", fotoUrl)
+                .addOnSuccessListener(aVoid -> callback.onSuccess(null))
+                .addOnFailureListener(e -> callback.onFailure(e.getMessage()));
+    }
+
+    public void ascenderAAdmin(String idGrupo, String uidMiembro, FirestoreCallback<Void> callback) {
+        db.collection(COLLECTION_GRUPOS)
+                .document(idGrupo)
+                .collection(COLLECTION_MIEMBROS)
+                .document(uidMiembro)
+                .update("rol", "admin")
+                .addOnSuccessListener(aVoid -> callback.onSuccess(null))
+                .addOnFailureListener(e -> callback.onFailure(e.getMessage()));
+    }
+
+    // El usuario actual abandona el grupo.
+    // Si era el único admin, se asigna uno aleatorio entre los restantes.
+    // Si era el último miembro, el grupo y todo su contenido se elimina.
+    public void salirDelGrupo(String idGrupo, String uid, FirestoreCallback<Void> callback) {
+        obtenerMiembrosGrupo(idGrupo, new FirestoreCallback<List<MiembroGrupo>>() {
+            @Override
+            public void onSuccess(List<MiembroGrupo> miembros) {
+                boolean erAdmin = false;
+                boolean hayOtroAdmin = false;
+                List<MiembroGrupo> otrosMiembros = new ArrayList<>();
+
+                for (MiembroGrupo m : miembros) {
+                    if (uid.equals(m.getUidMiembro())) {
+                        erAdmin = "admin".equalsIgnoreCase(m.getRol());
+                    } else {
+                        otrosMiembros.add(m);
+                        if ("admin".equalsIgnoreCase(m.getRol())) hayOtroAdmin = true;
+                    }
+                }
+
+                if (otrosMiembros.isEmpty()) {
+                    // Último miembro: eliminar grupo completo tras la salida
+                    ejecutarSalida(idGrupo, uid, new FirestoreCallback<Void>() {
+                        @Override
+                        public void onSuccess(Void v) { eliminarGrupoCompleto(idGrupo, callback); }
+                        @Override
+                        public void onFailure(String error) { callback.onFailure(error); }
+                    });
+                } else if (erAdmin && !hayOtroAdmin) {
+                    // Único admin: reasignar antes de salir
+                    MiembroGrupo nuevoAdmin = otrosMiembros.get(
+                            new Random().nextInt(otrosMiembros.size()));
+                    ascenderAAdmin(idGrupo, nuevoAdmin.getUidMiembro(), new FirestoreCallback<Void>() {
+                        @Override
+                        public void onSuccess(Void v) { ejecutarSalida(idGrupo, uid, callback); }
+                        @Override
+                        public void onFailure(String error) { callback.onFailure(error); }
+                    });
+                } else {
+                    ejecutarSalida(idGrupo, uid, callback);
+                }
+            }
+
+            @Override
+            public void onFailure(String error) { callback.onFailure(error); }
+        });
+    }
+
+    private void ejecutarSalida(String idGrupo, String uid, FirestoreCallback<Void> callback) {
+        WriteBatch batch = db.batch();
+        batch.delete(db.collection(COLLECTION_GRUPOS)
+                .document(idGrupo).collection(COLLECTION_MIEMBROS).document(uid));
+        batch.delete(db.collection("usuarios")
+                .document(uid).collection("grupos").document(idGrupo));
+        batch.commit()
+                .addOnSuccessListener(aVoid -> {
+                    Log.d(TAG, "Usuario " + uid + " salió del grupo " + idGrupo);
+                    quitarParticipanteDeTeseractosDelGrupo(idGrupo, uid, callback);
+                })
+                .addOnFailureListener(e -> callback.onFailure(e.getMessage()));
+    }
+
+    // Quita uid del array participantes de todos los teseractos del grupo.
+    // Se llama tanto al expulsar un miembro como al salir voluntariamente.
+    private void quitarParticipanteDeTeseractosDelGrupo(String idGrupo, String uid,
+                                                         FirestoreCallback<Void> callback) {
+        db.collection("teseractos")
+                .whereEqualTo("idGrupo", idGrupo)
+                .get()
+                .addOnSuccessListener(snapshots -> {
+                    if (snapshots.isEmpty()) {
+                        if (callback != null) callback.onSuccess(null);
+                        return;
+                    }
+                    WriteBatch batch = db.batch();
+                    snapshots.forEach(doc ->
+                            batch.update(doc.getReference(), "participantes",
+                                    FieldValue.arrayRemove(uid)));
+                    batch.commit()
+                            .addOnSuccessListener(v -> {
+                                if (callback != null) callback.onSuccess(null);
+                            })
+                            .addOnFailureListener(e -> {
+                                Log.e(TAG, "Error al quitar participante de teseractos", e);
+                                if (callback != null) callback.onSuccess(null); // no bloquear flujo principal
+                            });
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error al buscar teseractos del grupo", e);
+                    if (callback != null) callback.onFailure(e.getMessage());
+                });
+    }
+
+    // Elimina el grupo y todo su contenido: teseractos (con valoraciones y mensajes)
+    // e invitaciones pendientes de cualquier usuario.
+    private void eliminarGrupoCompleto(String idGrupo, FirestoreCallback<Void> callback) {
+        db.collection("teseractos")
+                .whereEqualTo("idGrupo", idGrupo)
+                .get()
+                .addOnSuccessListener(snap -> {
+                    List<String> ids = new ArrayList<>();
+                    snap.forEach(d -> ids.add(d.getId()));
+                    eliminarTeseractosSecuencial(ids, 0, idGrupo, callback);
+                })
+                .addOnFailureListener(e -> callback.onFailure(e.getMessage()));
+    }
+
+    // Recorre la lista de teseractos uno a uno, borrando sus subcols antes de borrarlo.
+    private void eliminarTeseractosSecuencial(List<String> ids, int idx, String idGrupo,
+                                               FirestoreCallback<Void> callback) {
+        if (idx >= ids.size()) {
+            eliminarInvitacionesYGrupo(idGrupo, callback);
+            return;
+        }
+        String idT = ids.get(idx);
+        borrarSubcoleccion(idT, "valoraciones", () ->
+                borrarSubcoleccion(idT, "mensajes", () ->
+                        db.collection("teseractos").document(idT).delete()
+                                .addOnSuccessListener(v ->
+                                        eliminarTeseractosSecuencial(ids, idx + 1, idGrupo, callback))
+                                .addOnFailureListener(e -> callback.onFailure(e.getMessage())),
+                        callback),
+                callback);
+    }
+
+    // Borra todos los documentos de una subcol de teseractos usando WriteBatch.
+    private void borrarSubcoleccion(String idTeseracto, String subcol,
+                                     Runnable onDone, FirestoreCallback<Void> onError) {
+        db.collection("teseractos").document(idTeseracto).collection(subcol).get()
+                .addOnSuccessListener(snap -> {
+                    if (snap.isEmpty()) { onDone.run(); return; }
+                    WriteBatch b = db.batch();
+                    snap.forEach(d -> b.delete(d.getReference()));
+                    b.commit()
+                            .addOnSuccessListener(v -> onDone.run())
+                            .addOnFailureListener(e -> onError.onFailure(e.getMessage()));
+                })
+                .addOnFailureListener(e -> onError.onFailure(e.getMessage()));
+    }
+
+    // Borra invitaciones pendientes al grupo (collection group) y el documento del grupo.
+    private void eliminarInvitacionesYGrupo(String idGrupo, FirestoreCallback<Void> callback) {
+        db.collectionGroup("invitacionesGrupo")
+                .whereEqualTo("idGrupo", idGrupo)
+                .get()
+                .addOnSuccessListener(snap -> {
+                    WriteBatch b = db.batch();
+                    snap.forEach(d -> b.delete(d.getReference()));
+                    b.delete(db.collection(COLLECTION_GRUPOS).document(idGrupo));
+                    b.commit()
+                            .addOnSuccessListener(v -> {
+                                Log.d(TAG, "Grupo " + idGrupo + " eliminado completamente");
+                                callback.onSuccess(null);
+                            })
+                            .addOnFailureListener(e -> callback.onFailure(e.getMessage()));
+                })
+                .addOnFailureListener(e -> callback.onFailure(e.getMessage()));
     }
 
     // Regenera el código de invitación de un grupo

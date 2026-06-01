@@ -34,7 +34,30 @@ public class TMDBDetalle {
     @SerializedName("vote_average")
     private double voteAverage;
 
+    @SerializedName("credits")
+    private Credits credits;
+
+    @SerializedName("created_by")
+    private java.util.List<Creator> createdBy;
+
     private String mediaType;
+
+    public static class Credits {
+        private java.util.List<CrewMember> crew = new java.util.ArrayList<>();
+        public java.util.List<CrewMember> getCrew() { return crew; }
+    }
+
+    public static class CrewMember {
+        private String job;
+        private String name;
+        public String getJob() { return job; }
+        public String getName() { return name; }
+    }
+
+    public static class Creator {
+        private String name;
+        public String getName() { return name; }
+    }
 
     public TMDBDetalle() {}
 
@@ -86,6 +109,20 @@ public class TMDBDetalle {
     public int getEpisodios() { return numberOfEpisodes; }
 
     public double getVoteAverage() { return voteAverage; }
-
     public void setVoteAverage(double voteAverage) { this.voteAverage = voteAverage; }
+
+    public String getDirectorOCreador() {
+        if ("movie".equals(mediaType)) {
+            if (credits != null && credits.getCrew() != null) {
+                for (CrewMember m : credits.getCrew()) {
+                    if ("Director".equals(m.getJob())) return m.getName();
+                }
+            }
+        } else if ("tv".equals(mediaType)) {
+            if (createdBy != null && !createdBy.isEmpty()) {
+                return createdBy.get(0).getName();
+            }
+        }
+        return null;
+    }
 }

@@ -10,6 +10,7 @@
 
     <!-- Título -->
     <TextView
+        android:id="@+id/tvTituloValoracion"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginBottom="20dp"

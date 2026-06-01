@@ -2,6 +2,8 @@ package com.example.openteseractus.ui.ventanas;
 
 import android.os.Bundle;
 import android.text.TextUtils;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.inputmethod.EditorInfo;
 import android.widget.Toast;
 
@@ -21,6 +23,7 @@ import com.example.openteseractus.modelos.Mensaje;
 import com.example.openteseractus.modelos.Usuario;
 import com.example.openteseractus.repositorios.MensajeRepository;
 import com.example.openteseractus.repositorios.UsuarioRepository;
+import com.example.openteseractus.servicios.MensajeNotificacionService;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.auth.FirebaseAuth;
@@ -51,6 +54,9 @@ public class ChatTeseractoActivity extends AppCompatActivity {
     // Listener de Firestore; se cancela al salir de la pantalla
     private ListenerRegistration listenerMensajes;
 
+    private boolean notificacionesSilenciadas = false;
+    private Menu menuActual;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -59,11 +65,12 @@ public class ChatTeseractoActivity extends AppCompatActivity {
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+            Insets ime = insets.getInsets(WindowInsetsCompat.Type.ime());
             v.setPadding(
                     systemBars.left,
                     systemBars.top,
                     systemBars.right,
-                    systemBars.bottom
+                    Math.max(systemBars.bottom, ime.bottom)
             );
             return insets;
         });
@@ -78,6 +85,38 @@ public class ChatTeseractoActivity extends AppCompatActivity {
         inicializarVistas();
         cargarNombreUsuarioActual();
         iniciarEscucha();
+        cargarEstadoSilencio();
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.menu_chat, menu);
+        menuActual = menu;
+        actualizarMenuSilencio();
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        if (item.getItemId() == R.id.action_silenciar) {
+            toggleSilencio();
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        MensajeNotificacionService.teseractoActivo = teseractoId;
+        usuarioRepository.marcarLeido(uidActual, teseractoId);
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        MensajeNotificacionService.teseractoActivo = null;
+        usuarioRepository.marcarLeido(uidActual, teseractoId);
     }
 
     private void inicializarVistas() {
@@ -181,6 +220,65 @@ public class ChatTeseractoActivity extends AppCompatActivity {
                 // Queda el uid como fallback
             }
         });
+    }
+
+    private void cargarEstadoSilencio() {
+        usuarioRepository.obtenerEstadoSilencio(uidActual, teseractoId,
+                new FirestoreCallback<Boolean>() {
+                    @Override
+                    public void onSuccess(Boolean silenciado) {
+                        notificacionesSilenciadas = silenciado;
+                        actualizarMenuSilencio();
+                    }
+                    @Override
+                    public void onFailure(String error) { }
+                });
+    }
+
+    private void actualizarMenuSilencio() {
+        if (menuActual == null) return;
+        MenuItem item = menuActual.findItem(R.id.action_silenciar);
+        if (item != null) {
+            item.setTitle(notificacionesSilenciadas
+                    ? "Activar notificaciones"
+                    : "Silenciar notificaciones");
+        }
+    }
+
+    private void toggleSilencio() {
+        if (notificacionesSilenciadas) {
+            usuarioRepository.activarNotificacionesTeseracto(uidActual, teseractoId,
+                    new FirestoreCallback<Void>() {
+                        @Override
+                        public void onSuccess(Void v) {
+                            notificacionesSilenciadas = false;
+                            actualizarMenuSilencio();
+                            Toast.makeText(ChatTeseractoActivity.this,
+                                    "Notificaciones activadas", Toast.LENGTH_SHORT).show();
+                        }
+                        @Override
+                        public void onFailure(String error) {
+                            Toast.makeText(ChatTeseractoActivity.this,
+                                    "Error: " + error, Toast.LENGTH_SHORT).show();
+                        }
+                    });
+        } else {
+            usuarioRepository.silenciarTeseracto(uidActual, teseractoId,
+                    new FirestoreCallback<Void>() {
+                        @Override
+                        public void onSuccess(Void v) {
+                            notificacionesSilenciadas = true;
+                            actualizarMenuSilencio();
+                            Toast.makeText(ChatTeseractoActivity.this,
+                                    "Notificaciones silenciadas", Toast.LENGTH_SHORT).show();
+                        }
+                        @Override
+                        public void onFailure(String error) {
+                            Toast.makeText(ChatTeseractoActivity.this,
+                                    "Error: " + error, Toast.LENGTH_SHORT).show();
+                        }
+                    });
+        }
     }
 
     private void enviarMensaje() {

@@ -70,6 +70,14 @@ public class TeseractoRepository {
                 });
     }
 
+    public void eliminarTeseracto(String idTeseracto, FirestoreCallback<Void> callback) {
+        db.collection("teseractos")
+                .document(idTeseracto)
+                .delete()
+                .addOnSuccessListener(aVoid -> callback.onSuccess(null))
+                .addOnFailureListener(e -> callback.onFailure(e.getMessage()));
+    }
+
     public void actualizarNotaMedia(String idTeseracto, double notaMedia, FirestoreCallback<Void> callback) {
 
         db.collection("teseractos")

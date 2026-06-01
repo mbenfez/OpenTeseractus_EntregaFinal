@@ -15,6 +15,8 @@
     <string name="drawer_delete_account">Eliminar cuenta</string>
     <string name="drawer_logout">Cerrar sesión</string>
     <string name="drawer_reset_email_sent">Correo enviado. Revisa tu bandeja de entrada.</string>
+    <string name="verify_email_sent">Cuenta creada. Revisa tu correo para verificar tu email antes de iniciar sesión.</string>
+    <string name="email_not_verified">Debes verificar tu email antes de iniciar sesión. Revisa tu bandeja de entrada.</string>
     <string name="new_username_hint">Nuevo nombre de usuario</string>
     <string name="confirm_delete_account">¿Eliminar cuenta?</string>
     <string name="confirm_delete_msg">Esta acción es irreversible. Se eliminarán todos tus datos permanentemente.</string>
@@ -40,6 +42,7 @@
     <string name="add_name_group">Nombre del grupo</string>
     <string name="group_billboard">Cartelera</string>
     <string name="group_members">Miembros</string>
+    <string name="expelled_from_group">Has sido expulsado del grupo</string>
     <!--Teseractos-->
     <string name="movies">Películas</string>
     <string name="tvshows">Series</string>
@@ -67,4 +70,9 @@
     <string name="msg_no_ratings">Aún no hay valoraciones</string>
     <string name="no_ratings_msg">Aún no has valorado</string>
     <string name="user_rating_text">Tu nota</string>
+    <string name="search_teseract_hint">Buscar teseracto…</string>
+    <string name="opened_by">Abierto por </string>
+    <string name="delete_teseract">Eliminar teseracto</string>
+    <string name="promote_to_admin">Ascender a admin</string>
+    <string name="kick_member">Expulsar del grupo</string>
 </resources>

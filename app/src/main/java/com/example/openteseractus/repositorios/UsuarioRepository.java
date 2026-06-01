@@ -4,10 +4,14 @@ import android.util.Log;
 
 import com.example.openteseractus.callbacks.FirestoreCallback;
 import com.example.openteseractus.modelos.Usuario;
+import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.SetOptions;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 public class UsuarioRepository {
 
@@ -64,10 +68,7 @@ public class UsuarioRepository {
                 .limit(20)
                 .get()
                 .addOnSuccessListener(queryDocumentSnapshots -> {
-
-                    List<Usuario> usuarios =
-                            queryDocumentSnapshots.toObjects(Usuario.class);
-
+                    List<Usuario> usuarios = queryDocumentSnapshots.toObjects(Usuario.class);
                     callback.onSuccess(usuarios);
                 })
                 .addOnFailureListener(e ->
@@ -149,6 +150,52 @@ public class UsuarioRepository {
                     Log.e(TAG, "Error al eliminar usuario", e);
                     if (callback != null) callback.onFailure(e.getMessage());
                 });
+    }
+
+    // ==================== PREFERENCIAS DE NOTIFICACIÓN ====================
+    // Las preferencias se guardan en usuarios/{uid}/preferencias/notificaciones
+    // para no interferir con actualizarUsuario() que hace set() completo del perfil.
+
+    // ==================== ESTADO DE LECTURA ====================
+
+    public void marcarLeido(String uid, String idTeseracto) {
+        Map<String, Object> data = Collections.singletonMap(
+                "ultimaLectura", FieldValue.serverTimestamp());
+        db.collection(COLLECTION_USUARIOS).document(uid)
+                .collection("lecturas").document(idTeseracto)
+                .set(data);
+    }
+
+    public void silenciarTeseracto(String uid, String idTeseracto, FirestoreCallback<Void> callback) {
+        Map<String, Object> data = Collections.singletonMap(
+                "silenciados", FieldValue.arrayUnion(idTeseracto));
+        db.collection(COLLECTION_USUARIOS).document(uid)
+                .collection("preferencias").document("notificaciones")
+                .set(data, SetOptions.merge())
+                .addOnSuccessListener(v -> { if (callback != null) callback.onSuccess(null); })
+                .addOnFailureListener(e -> { if (callback != null) callback.onFailure(e.getMessage()); });
+    }
+
+    public void activarNotificacionesTeseracto(String uid, String idTeseracto, FirestoreCallback<Void> callback) {
+        Map<String, Object> data = Collections.singletonMap(
+                "silenciados", FieldValue.arrayRemove(idTeseracto));
+        db.collection(COLLECTION_USUARIOS).document(uid)
+                .collection("preferencias").document("notificaciones")
+                .set(data, SetOptions.merge())
+                .addOnSuccessListener(v -> { if (callback != null) callback.onSuccess(null); })
+                .addOnFailureListener(e -> { if (callback != null) callback.onFailure(e.getMessage()); });
+    }
+
+    public void obtenerEstadoSilencio(String uid, String idTeseracto, FirestoreCallback<Boolean> callback) {
+        db.collection(COLLECTION_USUARIOS).document(uid)
+                .collection("preferencias").document("notificaciones")
+                .get()
+                .addOnSuccessListener(doc -> {
+                    if (!doc.exists()) { callback.onSuccess(false); return; }
+                    List<String> silenciados = (List<String>) doc.get("silenciados");
+                    callback.onSuccess(silenciados != null && silenciados.contains(idTeseracto));
+                })
+                .addOnFailureListener(e -> callback.onFailure(e.getMessage()));
     }
 
     // Obtiene todos los usuarios activos (para búsqueda/sugerencias)

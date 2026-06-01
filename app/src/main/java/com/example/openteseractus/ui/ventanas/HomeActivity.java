@@ -1,8 +1,14 @@
 package com.example.openteseractus.ui.ventanas;
 
+import android.Manifest;
 import android.app.AlertDialog;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.text.InputType;
 import android.text.TextUtils;
@@ -13,12 +19,15 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.core.content.ContextCompat;
 import androidx.activity.EdgeToEdge;
 import androidx.activity.OnBackPressedCallback;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.SearchView;
+import androidx.core.app.ActivityCompat;
+import androidx.core.app.NotificationCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.GravityCompat;
 import androidx.core.view.ViewCompat;
@@ -33,19 +42,24 @@ import com.example.openteseractus.R;
 import com.example.openteseractus.adapters.GrupoAdapter;
 import com.example.openteseractus.callbacks.FirestoreCallback;
 import com.example.openteseractus.modelos.Grupo;
+import com.example.openteseractus.modelos.Invitacion;
 import com.example.openteseractus.modelos.Usuario;
 import com.example.openteseractus.repositorios.GrupoRepository;
+import com.example.openteseractus.repositorios.InvitacionRepository;
 import com.example.openteseractus.repositorios.UsuarioRepository;
 import com.example.openteseractus.servicios.AuthService;
+import com.example.openteseractus.servicios.MensajeNotificacionService;
 import com.example.openteseractus.ui.MainActivity;
 import com.example.openteseractus.ui.crear.CrearGrupoActivity;
 import com.google.android.material.appbar.MaterialToolbar;
+import com.google.android.material.badge.BadgeDrawable;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.imageview.ShapeableImageView;
 import com.google.android.material.navigation.NavigationView;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 
@@ -63,8 +77,14 @@ public class HomeActivity extends AppCompatActivity {
     private ShapeableImageView imgPerfil;
     private ProgressBar progressBar;
 
+    private static final String CHANNEL_ID = "invitaciones";
+    private static final int NOTIF_ID = 1001;
+
     private UsuarioRepository usuarioRepository;
     private GrupoRepository grupoRepository;
+    private InvitacionRepository invitacionRepository;
+    private ListenerRegistration invitacionListener;
+    private int ultimoConteo = -1;
     private FirebaseAuth auth;
     private FirebaseStorage storage;
     private GrupoAdapter grupoAdapter;
@@ -104,6 +124,10 @@ public class HomeActivity extends AppCompatActivity {
         setupListeners();
         setupLaunchers();
         cargarDatosUsuario();
+        crearCanalNotificacion();
+        pedirPermisoNotificaciones();
+        iniciarEscuchaInvitaciones();
+        iniciarServicioMensajes();
     }
 
     private void inicializarVistas() {
@@ -121,6 +145,7 @@ public class HomeActivity extends AppCompatActivity {
     private void inicializarFirebase() {
         usuarioRepository = new UsuarioRepository();
         grupoRepository = new GrupoRepository();
+        invitacionRepository = new InvitacionRepository();
         auth = FirebaseAuth.getInstance();
         storage = FirebaseStorage.getInstance();
         grupos = new ArrayList<>();
@@ -206,10 +231,6 @@ public class HomeActivity extends AppCompatActivity {
         );
     }
 
-    // ─────────────────────────────────────────────────
-    //  DATA LOADING
-    // ─────────────────────────────────────────────────
-
     private void cargarGrupos() {
         if (auth.getCurrentUser() == null) return;
         progressBar.setVisibility(View.VISIBLE);
@@ -280,10 +301,6 @@ public class HomeActivity extends AppCompatActivity {
         });
     }
 
-    // ─────────────────────────────────────────────────
-    //  SEARCH FILTER
-    // ─────────────────────────────────────────────────
-
     private void filtrarGrupos(String query) {
         grupos.clear();
         if (TextUtils.isEmpty(query)) {
@@ -298,10 +315,6 @@ public class HomeActivity extends AppCompatActivity {
         }
         grupoAdapter.updateGrupos(grupos);
     }
-
-    // ─────────────────────────────────────────────────
-    //  DRAWER ACTIONS
-    // ─────────────────────────────────────────────────
 
     private void subirFotoPerfil(Uri uri) {
         if (auth.getCurrentUser() == null) return;
@@ -441,6 +454,7 @@ public class HomeActivity extends AppCompatActivity {
             public void onSuccess(Void unused) {
                 auth.getCurrentUser().delete()
                         .addOnSuccessListener(aVoid -> {
+                            stopService(new Intent(HomeActivity.this, MensajeNotificacionService.class));
                             Toast.makeText(HomeActivity.this,
                                     "Cuenta eliminada", Toast.LENGTH_SHORT).show();
                             startActivity(new Intent(HomeActivity.this, MainActivity.class));
@@ -458,7 +472,13 @@ public class HomeActivity extends AppCompatActivity {
         });
     }
 
+    private void iniciarServicioMensajes() {
+        ContextCompat.startForegroundService(this,
+                new Intent(this, MensajeNotificacionService.class));
+    }
+
     private void cerrarSesion() {
+        stopService(new Intent(this, MensajeNotificacionService.class));
         authService.cerrarSesion();
         startActivity(new Intent(HomeActivity.this, MainActivity.class));
         finishAffinity();
@@ -479,5 +499,82 @@ public class HomeActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         cargarGrupos();
+        bottomNav.setSelectedItemId(R.id.nav_home);
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (invitacionListener != null) invitacionListener.remove();
+    }
+
+    private void crearCanalNotificacion() {
+        NotificationChannel channel = new NotificationChannel(
+                CHANNEL_ID, "Invitaciones", NotificationManager.IMPORTANCE_DEFAULT);
+        channel.setDescription("Nuevas invitaciones a grupos");
+        getSystemService(NotificationManager.class).createNotificationChannel(channel);
+    }
+
+    private void pedirPermisoNotificaciones() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                ActivityCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+                        != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.POST_NOTIFICATIONS}, 100);
+        }
+    }
+
+    private void iniciarEscuchaInvitaciones() {
+        if (auth.getCurrentUser() == null) return;
+        String uid = auth.getCurrentUser().getUid();
+        invitacionListener = invitacionRepository.escucharInvitaciones(uid,
+                new FirestoreCallback<List<Invitacion>>() {
+                    @Override
+                    public void onSuccess(List<Invitacion> invitaciones) {
+                        int count = invitaciones.size();
+                        actualizarBadge(count);
+                        if (ultimoConteo >= 0 && count > ultimoConteo) {
+                            mostrarNotificacionInvitacion(count);
+                        }
+                        ultimoConteo = count;
+                    }
+                    @Override
+                    public void onFailure(String error) { }
+                });
+    }
+
+    private void actualizarBadge(int count) {
+        BadgeDrawable badge = bottomNav.getOrCreateBadge(R.id.nav_invites);
+        if (count > 0) {
+            badge.setVisible(true);
+            badge.setNumber(count);
+        } else {
+            badge.setVisible(false);
+            badge.clearNumber();
+        }
+    }
+
+    private void mostrarNotificacionInvitacion(int count) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                ActivityCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+                        != PackageManager.PERMISSION_GRANTED) return;
+
+        Intent intent = new Intent(this, InvitacionesActivity.class);
+        PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, intent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+        String texto = count == 1
+                ? "Tienes 1 invitación pendiente"
+                : "Tienes " + count + " invitaciones pendientes";
+
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
+                .setSmallIcon(R.drawable.ic_mail)
+                .setContentTitle("Nueva invitación")
+                .setContentText(texto)
+                .setContentIntent(pendingIntent)
+                .setAutoCancel(true)
+                .setPriority(NotificationCompat.PRIORITY_DEFAULT);
+
+        getSystemService(NotificationManager.class).notify(NOTIF_ID, builder.build());
     }
 }
