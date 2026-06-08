@@ -74,9 +74,7 @@ app/src/main/java/com/example/openteseractus/
 4. Configura tu clave de API de TMDB en el proyecto.
 5. Sincroniza Gradle y ejecuta la aplicación en un emulador o dispositivo físico.
 
-O, alternativamente:
-
-1. Descarga el apk desde github.
+Además, existe la opción de descargar el apk desde github, en el último release de este repositorio.
 
 ---
 
