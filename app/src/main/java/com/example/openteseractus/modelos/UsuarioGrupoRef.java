@@ -1,5 +1,10 @@
 package com.example.openteseractus.modelos;
 
+/**
+ * Referencia ligera a un grupo almacenada en el perfil del usuario.
+ * Se guarda en la subcolección {@code grupos} del documento del usuario en Firestore
+ * para recuperar sus grupos de forma eficiente sin cargar el documento completo del grupo.
+ */
 public class UsuarioGrupoRef {
 
     private String idGrupo;

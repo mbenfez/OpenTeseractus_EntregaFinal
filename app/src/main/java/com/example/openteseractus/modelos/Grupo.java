@@ -2,6 +2,11 @@ package com.example.openteseractus.modelos;
 
 import java.util.Random;
 
+/**
+ * Representa un grupo de usuarios dentro de la aplicación.
+ * Un grupo agrupa a varios usuarios que comparten teseractos y pueden invitar a otros
+ * mediante un código alfanumérico de 6 caracteres.
+ */
 public class Grupo {
 
     private String id;
@@ -13,6 +18,14 @@ public class Grupo {
 
     public Grupo() {}
 
+    /**
+     * Crea un grupo con los datos básicos y genera automáticamente la fecha de creación
+     * y un código de invitación aleatorio.
+     *
+     * @param id          identificador único del grupo
+     * @param uidCreador  UID del usuario que crea el grupo
+     * @param nomGrupo    nombre visible del grupo
+     */
     public Grupo(String id, String uidCreador, String nomGrupo) {
         this.id = id;
         this.uidCreador = uidCreador;
@@ -21,8 +34,11 @@ public class Grupo {
         this.codInvitacion = generarCodigoInvitacion();
     }
 
-    // ==================== MÉTODOS DE NEGOCIO ====================
-
+    /**
+     * Genera un código de invitación aleatorio de 6 caracteres alfanuméricos en mayúsculas.
+     *
+     * @return el código generado
+     */
     public String generarCodigoInvitacion() {
         String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
         StringBuilder codigo = new StringBuilder();
@@ -33,20 +49,30 @@ public class Grupo {
         return codigo.toString();
     }
 
+    /** Reemplaza el código de invitación actual por uno nuevo generado aleatoriamente. */
     public void regenerarCodigo() {
         this.codInvitacion = generarCodigoInvitacion();
     }
 
+    /**
+     * Valida que el nombre del grupo no esté vacío y tenga entre 3 y 50 caracteres.
+     *
+     * @return {@code true} si el nombre es válido
+     */
     public boolean validarNombreGrupo() {
         if (nomGrupo == null || nomGrupo.trim().isEmpty()) return false;
         return nomGrupo.length() >= 3 && nomGrupo.length() <= 50;
     }
 
+    /**
+     * Comprueba si el UID dado corresponde al creador de este grupo.
+     *
+     * @param uid UID del usuario a comprobar
+     * @return {@code true} si el usuario es el creador
+     */
     public boolean esCreador(String uid) {
         return this.uidCreador != null && this.uidCreador.equals(uid);
     }
-
-    // ==================== GETTERS Y SETTERS ====================
 
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }

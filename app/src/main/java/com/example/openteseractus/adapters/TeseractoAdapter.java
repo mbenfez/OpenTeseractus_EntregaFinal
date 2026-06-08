@@ -24,6 +24,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Adapter de RecyclerView para la lista de teseractos de la cartelera de un grupo.
+ * Muestra el póster, título, nota media y badge de mensajes no leídos.
+ * Los nombres de usuario y el conteo de no leídos se cargan asincrónicamente
+ * y se almacenan en cachés internas para evitar peticiones redundantes.
+ */
 public class TeseractoAdapter extends RecyclerView.Adapter<TeseractoAdapter.ViewHolder> {
 
     private List<Teseracto> teseractos;
@@ -64,7 +70,6 @@ public class TeseractoAdapter extends RecyclerView.Adapter<TeseractoAdapter.View
             holder.tvNota.setText("· /10");
         }
 
-        // Opener username
         String uid = t.getUidAbiertoPor();
         if (uid != null && !uid.isEmpty()) {
             if (nombresCache.containsKey(uid)) {

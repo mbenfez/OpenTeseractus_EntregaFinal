@@ -1,5 +1,9 @@
 package com.example.openteseractus.modelos;
 
+/**
+ * Representa una invitación para que un usuario se una a un grupo.
+ * Se almacena en la subcolección {@code invitacionesGrupo} del usuario invitado.
+ */
 public class Invitacion {
 
     private String id;
@@ -15,6 +19,15 @@ public class Invitacion {
 
     public Invitacion() {}
 
+    /**
+     * Crea una invitación con todos sus datos y registra el momento de creación.
+     *
+     * @param id           identificador único de la invitación
+     * @param idGrupo      identificador del grupo al que se invita
+     * @param uidInvitado  UID del usuario que recibe la invitación
+     * @param uidInvita    UID del usuario que envía la invitación
+     * @param nombreGrupo  nombre del grupo (para mostrar en la notificación)
+     */
     public Invitacion( String id, String idGrupo, String uidInvitado, String uidInvita, String nombreGrupo) {
         this.id = id;
         this.idGrupo = idGrupo;

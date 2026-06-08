@@ -24,6 +24,12 @@ import com.google.firebase.auth.FirebaseAuth;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Pantalla de invitaciones pendientes del usuario.
+ * Carga la lista al abrirse y permite aceptar, rechazar o borrar todas las invitaciones.
+ * La navegación "atrás" aplica una animación de deslizamiento hacia la izquierda
+ * para mantener coherencia con la transición de entrada desde HomeActivity.
+ */
 public class InvitacionesActivity extends AppCompatActivity {
 
     private RecyclerView recyclerInvitaciones;
@@ -46,7 +52,6 @@ public class InvitacionesActivity extends AppCompatActivity {
             return insets;
         });
 
-        // Back gesture → slide right
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
             @Override
             public void handleOnBackPressed() {
@@ -90,7 +95,6 @@ public class InvitacionesActivity extends AppCompatActivity {
         });
     }
 
-    /** Cierra esta actividad y anima hacia la derecha (= volver a Home por la izquierda). */
     private void volverAHome() {
         finish();
         overridePendingTransition(R.anim.slide_in_left, R.anim.slide_out_right);

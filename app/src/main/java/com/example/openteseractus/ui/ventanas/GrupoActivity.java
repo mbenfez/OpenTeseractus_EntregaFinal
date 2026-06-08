@@ -20,6 +20,12 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
 
+/**
+ * Pantalla de un grupo concreto.
+ * Contiene un ViewPager2 con dos pestañas: cartelera de teseractos y lista de miembros.
+ * Escucha en tiempo real la membresía del usuario; si el usuario es expulsado del grupo
+ * mientras esta pantalla está abierta, navega de vuelta automáticamente.
+ */
 public class GrupoActivity extends AppCompatActivity {
 
     private TabLayout tabLayout;
@@ -75,7 +81,7 @@ public class GrupoActivity extends AppCompatActivity {
                 .addSnapshotListener((snapshot, error) -> {
                     if (error != null || snapshot == null) return;
                     if (!snapshot.exists()) {
-                        // Borrar la ref del grupo en el propio usuario y volver al Home
+                        
                         grupoRepository.eliminarRefGrupoDeUsuario(uid, idGrupo,
                                 new FirestoreCallback<Void>() {
                                     @Override public void onSuccess(Void v) { salirPorExpulsion(); }

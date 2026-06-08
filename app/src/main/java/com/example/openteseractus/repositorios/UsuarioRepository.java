@@ -13,6 +13,11 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Repositorio para la gestión de usuarios en la colección {@code usuarios} de Firestore.
+ * También gestiona las subcolecciones {@code lecturas} y {@code preferencias/notificaciones}
+ * del perfil del usuario.
+ */
 public class UsuarioRepository {
 
     private static final String TAG = "UsuarioRepository";
@@ -23,7 +28,6 @@ public class UsuarioRepository {
         this.db = FirebaseFirestore.getInstance();
     }
 
-    // Crea un nuevo usuario en Firestore
     public void crearUsuario(Usuario usuario, FirestoreCallback<Usuario> callback) {
 
         db.collection(COLLECTION_USUARIOS)
@@ -39,7 +43,6 @@ public class UsuarioRepository {
                 });
     }
 
-    // Obtiene un usuario por su UID
     public void obtenerUsuario(String uid, FirestoreCallback<Usuario> callback) {
         db.collection(COLLECTION_USUARIOS)
                 .document(uid)
@@ -60,6 +63,13 @@ public class UsuarioRepository {
                 });
     }
 
+    /**
+     * Busca usuarios cuyo {@code username} comience por la cadena indicada
+     * usando una consulta de rango en Firestore (máximo 20 resultados).
+     *
+     * @param query    prefijo de búsqueda
+     * @param callback resultado: lista de usuarios coincidentes o error
+     */
     public void buscarUsuarios(String query, FirestoreCallback<List<Usuario>> callback) {
         db.collection("usuarios")
                 .orderBy("username")
@@ -75,7 +85,6 @@ public class UsuarioRepository {
                         callback.onFailure(e.getMessage()));
     }
 
-    // Actualiza los datos de un usuario
     public void actualizarUsuario(Usuario usuario, FirestoreCallback<Usuario> callback) {
         db.collection(COLLECTION_USUARIOS)
                 .document(usuario.getUid())
@@ -90,7 +99,13 @@ public class UsuarioRepository {
                 });
     }
 
-    // Obtiene el email asociado a un username (para login con nombre de usuario)
+    /**
+     * Resuelve el email asociado a un nombre de usuario. Se usa en el flujo de login
+     * cuando el usuario introduce su username en lugar del email.
+     *
+     * @param username nombre de usuario a resolver
+     * @param callback resultado: el email encontrado o un mensaje de error
+     */
     public void obtenerEmailPorUsername(String username, FirestoreCallback<String> callback) {
         db.collection(COLLECTION_USUARIOS)
                 .whereEqualTo("username", username)
@@ -111,7 +126,6 @@ public class UsuarioRepository {
                 .addOnFailureListener(e -> callback.onFailure(e.getMessage()));
     }
 
-    // Verifica si un username ya existe
     public void existeUsername(String username, FirestoreCallback<Boolean> callback) {
         db.collection(COLLECTION_USUARIOS)
                 .whereEqualTo("username", username)
@@ -137,7 +151,6 @@ public class UsuarioRepository {
                         Log.e("USUARIO_ESTADO", e.getMessage()));
     }
 
-    // Elimina un usuario de Firestore
     public void eliminarUsuario(String uid, FirestoreCallback<Void> callback) {
         db.collection(COLLECTION_USUARIOS)
                 .document(uid)
@@ -152,12 +165,13 @@ public class UsuarioRepository {
                 });
     }
 
-    // ==================== PREFERENCIAS DE NOTIFICACIÓN ====================
-    // Las preferencias se guardan en usuarios/{uid}/preferencias/notificaciones
-    // para no interferir con actualizarUsuario() que hace set() completo del perfil.
-
-    // ==================== ESTADO DE LECTURA ====================
-
+    /**
+     * Actualiza el timestamp de última lectura del teseracto para el usuario indicado.
+     * Se llama al entrar y al salir del chat para marcar mensajes como leídos.
+     *
+     * @param uid         UID del usuario
+     * @param idTeseracto identificador del teseracto
+     */
     public void marcarLeido(String uid, String idTeseracto) {
         Map<String, Object> data = Collections.singletonMap(
                 "ultimaLectura", FieldValue.serverTimestamp());
@@ -166,6 +180,14 @@ public class UsuarioRepository {
                 .set(data);
     }
 
+    /**
+     * Añade un teseracto a la lista de silenciados del usuario para suprimir
+     * sus notificaciones en {@link com.example.openteseractus.servicios.MensajeNotificacionService}.
+     *
+     * @param uid         UID del usuario
+     * @param idTeseracto identificador del teseracto a silenciar
+     * @param callback    resultado de la operación
+     */
     public void silenciarTeseracto(String uid, String idTeseracto, FirestoreCallback<Void> callback) {
         Map<String, Object> data = Collections.singletonMap(
                 "silenciados", FieldValue.arrayUnion(idTeseracto));
@@ -176,6 +198,14 @@ public class UsuarioRepository {
                 .addOnFailureListener(e -> { if (callback != null) callback.onFailure(e.getMessage()); });
     }
 
+    /**
+     * Elimina un teseracto de la lista de silenciados del usuario para
+     * reanudar sus notificaciones.
+     *
+     * @param uid         UID del usuario
+     * @param idTeseracto identificador del teseracto
+     * @param callback    resultado de la operación
+     */
     public void activarNotificacionesTeseracto(String uid, String idTeseracto, FirestoreCallback<Void> callback) {
         Map<String, Object> data = Collections.singletonMap(
                 "silenciados", FieldValue.arrayRemove(idTeseracto));
@@ -198,7 +228,6 @@ public class UsuarioRepository {
                 .addOnFailureListener(e -> callback.onFailure(e.getMessage()));
     }
 
-    // Obtiene todos los usuarios activos (para búsqueda/sugerencias)
     public void obtenerUsuariosActivos(FirestoreCallback<List<Usuario>> callback) {
         db.collection(COLLECTION_USUARIOS)
                 .whereEqualTo("activo", true)

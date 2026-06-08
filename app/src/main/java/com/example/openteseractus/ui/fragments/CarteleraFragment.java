@@ -28,6 +28,12 @@ import com.google.firebase.auth.FirebaseAuth;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Fragment de la cartelera de un grupo.
+ * Muestra los teseractos divididos en dos listas horizontales: películas y series.
+ * Suscribe un listener en tiempo real a Firestore para actualizar las listas automáticamente.
+ * Incluye un campo de búsqueda local que filtra ambas listas simultáneamente.
+ */
 public class CarteleraFragment extends Fragment {
 
     private String idGrupo;
@@ -112,7 +118,6 @@ public class CarteleraFragment extends Fragment {
                 peliculasAdapter.update(nuevasPeliculas);
                 seriesAdapter.update(nuevasSeries);
 
-                // Reaplicar filtro activo si hay texto
                 if (etBuscar != null && etBuscar.getText() != null) {
                     String q = etBuscar.getText().toString();
                     if (!q.isEmpty()) {

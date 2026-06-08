@@ -17,6 +17,11 @@ import java.util.List;
 import java.util.Random;
 import java.util.UUID;
 
+/**
+ * Repositorio que centraliza todas las operaciones CRUD sobre grupos en Firestore.
+ * Gestiona la colección {@code grupos} y las subcolecciones {@code miembros},
+ * así como la referencia inversa en {@code usuarios/{uid}/grupos}.
+ */
 public class GrupoRepository {
 
     private static final String TAG = "GrupoRepository";
@@ -29,7 +34,15 @@ public class GrupoRepository {
         this.db = FirebaseFirestore.getInstance();
     }
 
-    // Crea un nuevo grupo y añade al creador como administrador
+    /**
+     * Crea un grupo nuevo en Firestore usando un WriteBatch atómico que persiste
+     * simultáneamente el documento del grupo, el miembro creador (con rol {@code "admin"})
+     * y la referencia inversa en el perfil del usuario.
+     *
+     * @param grupo      datos del grupo a crear
+     * @param uidCreador UID del usuario creador
+     * @param callback   resultado: el grupo creado o el error
+     */
     public void crearGrupo(Grupo grupo, String uidCreador, FirestoreCallback<Grupo> callback) {
 
         if (grupo.getId() == null) {
@@ -49,16 +62,13 @@ public class GrupoRepository {
 
         WriteBatch batch = db.batch();
 
-        // grupo
         batch.set(db.collection("grupos").document(grupo.getId()), grupo);
 
-        // miembro
         batch.set(db.collection("grupos")
                 .document(grupo.getId())
                 .collection("miembros")
                 .document(uidCreador), admin);
 
-        // referencia usuario
         batch.set(db.collection("usuarios")
                 .document(uidCreador)
                 .collection("grupos")
@@ -69,7 +79,12 @@ public class GrupoRepository {
                 .addOnFailureListener(e -> callback.onFailure(e.getMessage()));
     }
 
-    // Obtiene un grupo por su ID
+    /**
+     * Obtiene un grupo por su ID.
+     *
+     * @param idGrupo  identificador del grupo
+     * @param callback resultado: el objeto {@link Grupo} o un mensaje de error
+     */
     public void obtenerGrupo(String idGrupo, FirestoreCallback<Grupo> callback) {
         db.collection(COLLECTION_GRUPOS)
                 .document(idGrupo)
@@ -90,7 +105,14 @@ public class GrupoRepository {
                 });
     }
 
-    // Obtiene todos los grupos de un usuario
+    /**
+     * Obtiene todos los grupos a los que pertenece un usuario, ordenados por actividad
+     * reciente. Internamente usa la subcolección de referencias del usuario y luego
+     * recupera los documentos completos en lotes de 10 (límite de Firestore {@code whereIn}).
+     *
+     * @param uid      UID del usuario
+     * @param callback resultado: lista de grupos ordenada por actividad o error
+     */
     public void obtenerGruposDeUsuario(String uid, FirestoreCallback<List<Grupo>> callback) {
 
         db.collection("usuarios")
@@ -111,7 +133,7 @@ public class GrupoRepository {
                         obtenerGruposPorIds(idsGrupos, new FirestoreCallback<List<Grupo>>() {
                             @Override
                             public void onSuccess(List<Grupo> grupos) {
-                                // Restore the ultimaActividad order from the ref query
+                                
                                 grupos.sort((a, b) -> {
                                     int ia = idsGrupos.indexOf(a.getId());
                                     int ib = idsGrupos.indexOf(b.getId());
@@ -129,7 +151,6 @@ public class GrupoRepository {
                 .addOnFailureListener(e -> callback.onFailure(e.getMessage()));
     }
 
-    // Obtiene grupos por lista de IDs (maneja el límite de 10 de Firestore)
     private void obtenerGruposPorIds(List<String> ids, FirestoreCallback<List<Grupo>> callback) {
         List<Grupo> todosGrupos = new ArrayList<>();
         int batchSize = 10;
@@ -163,7 +184,12 @@ public class GrupoRepository {
         }
     }
 
-    // Busca un grupo por código de invitación
+    /**
+     * Busca un grupo por su código de invitación.
+     *
+     * @param codigo   código de 6 caracteres
+     * @param callback resultado: el grupo encontrado o un error si el código no existe
+     */
     public void buscarGrupoPorCodigo(String codigo, FirestoreCallback<Grupo> callback) {
         db.collection(COLLECTION_GRUPOS)
                 .whereEqualTo("codInvitacion", codigo)
@@ -197,7 +223,14 @@ public class GrupoRepository {
                         callback.onFailure(e.getMessage()));
     }
 
-    // Añade un miembro a un grupo
+    /**
+     * Une a un usuario a un grupo existente mediante un WriteBatch atómico que crea
+     * el documento de miembro y la referencia inversa en el perfil del usuario.
+     *
+     * @param idGrupo  identificador del grupo
+     * @param uid      UID del usuario que se une
+     * @param callback resultado de la operación
+     */
     public void unirseAGrupo(String idGrupo, String uid, FirestoreCallback<Void> callback) {
         db.collection("grupos").document(idGrupo).get()
                 .addOnSuccessListener(doc -> {
@@ -229,7 +262,6 @@ public class GrupoRepository {
                 });
     }
 
-    // Obtiene los miembros de un grupo
     public void obtenerMiembrosGrupo(String idGrupo, FirestoreCallback<List<MiembroGrupo>> callback) {
         db.collection(COLLECTION_GRUPOS)
                 .document(idGrupo)
@@ -265,7 +297,6 @@ public class GrupoRepository {
                 });
     }
 
-    // Actualiza los datos de un grupo
     public void actualizarGrupo(Grupo grupo, FirestoreCallback<Grupo> callback) {
         db.collection(COLLECTION_GRUPOS)
                 .document(grupo.getId())
@@ -280,9 +311,6 @@ public class GrupoRepository {
                 });
     }
 
-    // Elimina un miembro de un grupo (expulsión por admin).
-    // La referencia en usuarios/{uid}/grupos/{idGrupo} la borra el propio cliente del expulsado
-    // cuando su listener de membresía detecta la eliminación de este documento.
     public void eliminarMiembro(String idGrupo, String uid, FirestoreCallback<Void> callback) {
         db.collection(COLLECTION_GRUPOS)
                 .document(idGrupo)
@@ -299,7 +327,6 @@ public class GrupoRepository {
                 });
     }
 
-    // Elimina la referencia al grupo en el propio usuario (llamado por el usuario expulsado desde su cliente)
     public void eliminarRefGrupoDeUsuario(String uid, String idGrupo, FirestoreCallback<Void> callback) {
         db.collection("usuarios")
                 .document(uid)
@@ -316,7 +343,6 @@ public class GrupoRepository {
                 });
     }
 
-    // Genera un código de invitación aleatorio de 6 caracteres alfanuméricos
     private String generarCodigoInvitacion() {
         String caracteres = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
         Random random = new Random();
@@ -329,7 +355,6 @@ public class GrupoRepository {
         return codigo.toString();
     }
 
-    // Actualiza el timestamp de última actividad del usuario en el grupo
     public void actualizarUltimaActividad(String uid, String idGrupo) {
         db.collection("usuarios")
                 .document(uid)
@@ -366,9 +391,20 @@ public class GrupoRepository {
                 .addOnFailureListener(e -> callback.onFailure(e.getMessage()));
     }
 
-    // El usuario actual abandona el grupo.
-    // Si era el único admin, se asigna uno aleatorio entre los restantes.
-    // Si era el último miembro, el grupo y todo su contenido se elimina.
+    /**
+     * Gestiona la salida de un usuario de un grupo con lógica de consistencia:
+     * <ul>
+     *   <li>Si era el último miembro, elimina el grupo completo (teseractos, valoraciones,
+     *       mensajes e invitaciones).</li>
+     *   <li>Si era admin sin otro admin, asciende aleatoriamente a otro miembro.</li>
+     *   <li>En cualquier caso, elimina al usuario de la lista de participantes
+     *       de todos los teseractos del grupo.</li>
+     * </ul>
+     *
+     * @param idGrupo  identificador del grupo
+     * @param uid      UID del usuario que sale
+     * @param callback resultado de la operación
+     */
     public void salirDelGrupo(String idGrupo, String uid, FirestoreCallback<Void> callback) {
         obtenerMiembrosGrupo(idGrupo, new FirestoreCallback<List<MiembroGrupo>>() {
             @Override
@@ -387,7 +423,7 @@ public class GrupoRepository {
                 }
 
                 if (otrosMiembros.isEmpty()) {
-                    // Último miembro: eliminar grupo completo tras la salida
+                    
                     ejecutarSalida(idGrupo, uid, new FirestoreCallback<Void>() {
                         @Override
                         public void onSuccess(Void v) { eliminarGrupoCompleto(idGrupo, callback); }
@@ -395,7 +431,7 @@ public class GrupoRepository {
                         public void onFailure(String error) { callback.onFailure(error); }
                     });
                 } else if (erAdmin && !hayOtroAdmin) {
-                    // Único admin: reasignar antes de salir
+                    
                     MiembroGrupo nuevoAdmin = otrosMiembros.get(
                             new Random().nextInt(otrosMiembros.size()));
                     ascenderAAdmin(idGrupo, nuevoAdmin.getUidMiembro(), new FirestoreCallback<Void>() {
@@ -428,8 +464,6 @@ public class GrupoRepository {
                 .addOnFailureListener(e -> callback.onFailure(e.getMessage()));
     }
 
-    // Quita uid del array participantes de todos los teseractos del grupo.
-    // Se llama tanto al expulsar un miembro como al salir voluntariamente.
     private void quitarParticipanteDeTeseractosDelGrupo(String idGrupo, String uid,
                                                          FirestoreCallback<Void> callback) {
         db.collection("teseractos")
@@ -450,7 +484,7 @@ public class GrupoRepository {
                             })
                             .addOnFailureListener(e -> {
                                 Log.e(TAG, "Error al quitar participante de teseractos", e);
-                                if (callback != null) callback.onSuccess(null); // no bloquear flujo principal
+                                if (callback != null) callback.onSuccess(null); 
                             });
                 })
                 .addOnFailureListener(e -> {
@@ -459,8 +493,6 @@ public class GrupoRepository {
                 });
     }
 
-    // Elimina el grupo y todo su contenido: teseractos (con valoraciones y mensajes)
-    // e invitaciones pendientes de cualquier usuario.
     private void eliminarGrupoCompleto(String idGrupo, FirestoreCallback<Void> callback) {
         db.collection("teseractos")
                 .whereEqualTo("idGrupo", idGrupo)
@@ -473,7 +505,6 @@ public class GrupoRepository {
                 .addOnFailureListener(e -> callback.onFailure(e.getMessage()));
     }
 
-    // Recorre la lista de teseractos uno a uno, borrando sus subcols antes de borrarlo.
     private void eliminarTeseractosSecuencial(List<String> ids, int idx, String idGrupo,
                                                FirestoreCallback<Void> callback) {
         if (idx >= ids.size()) {
@@ -491,7 +522,6 @@ public class GrupoRepository {
                 callback);
     }
 
-    // Borra todos los documentos de una subcol de teseractos usando WriteBatch.
     private void borrarSubcoleccion(String idTeseracto, String subcol,
                                      Runnable onDone, FirestoreCallback<Void> onError) {
         db.collection("teseractos").document(idTeseracto).collection(subcol).get()
@@ -506,7 +536,6 @@ public class GrupoRepository {
                 .addOnFailureListener(e -> onError.onFailure(e.getMessage()));
     }
 
-    // Borra invitaciones pendientes al grupo (collection group) y el documento del grupo.
     private void eliminarInvitacionesYGrupo(String idGrupo, FirestoreCallback<Void> callback) {
         db.collectionGroup("invitacionesGrupo")
                 .whereEqualTo("idGrupo", idGrupo)
@@ -525,7 +554,12 @@ public class GrupoRepository {
                 .addOnFailureListener(e -> callback.onFailure(e.getMessage()));
     }
 
-    // Regenera el código de invitación de un grupo
+    /**
+     * Genera un nuevo código de invitación aleatorio y lo persiste en el documento del grupo.
+     *
+     * @param idGrupo  identificador del grupo
+     * @param callback resultado: el nuevo código generado o un error
+     */
     public void regenerarCodigoInvitacion(String idGrupo, FirestoreCallback<String> callback) {
         String nuevoCodigo = generarCodigoInvitacion();
 

@@ -16,10 +16,23 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Repositorio para el envío y escucha de mensajes de chat en los teseractos.
+ * Los mensajes se almacenan en la subcolección {@code mensajes} del teseracto
+ * usando {@code FieldValue.serverTimestamp()} para garantizar un orden consistente.
+ */
 public class MensajeRepository {
 
     private FirebaseFirestore db = FirebaseFirestore.getInstance();
 
+    /**
+     * Envía un mensaje al chat de un teseracto mediante WriteBatch atómico:
+     * crea el documento del mensaje con timestamp de servidor y añade al autor
+     * a la lista de participantes del teseracto.
+     *
+     * @param m        mensaje a enviar
+     * @param callback resultado de la operación
+     */
     public void enviarMensaje(Mensaje m, FirestoreCallback<Void> callback) {
         Map<String, Object> data = new HashMap<>();
         data.put("uidAutor", m.getUidAutor());
@@ -27,8 +40,6 @@ public class MensajeRepository {
         data.put("contenido", m.getContenido());
         data.put("fechaEnvio", FieldValue.serverTimestamp());
 
-        // Batch atómico: escribe el mensaje y registra al autor como participante.
-        // "participantes" en el doc del teseracto alimenta el servicio de notificaciones.
         DocumentReference mensajeRef = db.collection("teseractos")
                 .document(m.getIdTeseracto())
                 .collection("mensajes")
@@ -46,6 +57,16 @@ public class MensajeRepository {
                 .addOnFailureListener(e -> callback.onFailure(e.getMessage()));
     }
 
+    /**
+     * Registra un listener en tiempo real que recibe los mensajes de un teseracto
+     * ordenados cronológicamente. Deserializa el campo {@code fechaEnvio} que puede
+     * llegar como {@link com.google.firebase.Timestamp}, {@code Long} o {@code Number}
+     * para compatibilidad con datos escritos por clientes distintos.
+     *
+     * @param idTeseracto identificador del teseracto
+     * @param callback    invocado en cada cambio con la lista completa de mensajes
+     * @return {@link ListenerRegistration} para cancelar la suscripción
+     */
     public ListenerRegistration escucharMensajes(
             String idTeseracto,
             FirestoreCallback<List<Mensaje>> callback
@@ -71,8 +92,13 @@ public class MensajeRepository {
     }
 
     /**
-     * Devuelve el número de mensajes de otros usuarios recibidos después de la última
-     * vez que el usuario leyó este chat (usuarios/{uid}/lecturas/{idTeseracto}.ultimaLectura).
+     * Cuenta los mensajes no leídos de otros usuarios en un teseracto.
+     * Consulta el documento {@code usuarios/{uid}/lecturas/{idTeseracto}} para obtener
+     * el timestamp de la última lectura y filtra mensajes más recientes escritos por otros.
+     *
+     * @param uid          UID del usuario para quien se cuentan los no leídos
+     * @param idTeseracto  identificador del teseracto
+     * @param callback     resultado: número de mensajes no leídos o error
      */
     public void contarNoLeidos(String uid, String idTeseracto, FirestoreCallback<Integer> callback) {
         db.collection("usuarios").document(uid)
@@ -99,7 +125,6 @@ public class MensajeRepository {
                 .addOnFailureListener(e -> callback.onFailure(e.getMessage()));
     }
 
-    // Soporta fechaEnvio tanto como Timestamp (mensajes nuevos) como Long (mensajes viejos)
     private Mensaje parsearMensaje(DocumentSnapshot doc) {
         try {
             Mensaje m = new Mensaje();
@@ -116,7 +141,7 @@ public class MensajeRepository {
             } else if (fechaObj instanceof Number) {
                 m.setFechaEnvio(((Number) fechaObj).longValue());
             } else {
-                // Mensaje recién enviado aún sin timestamp del servidor: usar hora actual
+                
                 m.setFechaEnvio(System.currentTimeMillis());
             }
 

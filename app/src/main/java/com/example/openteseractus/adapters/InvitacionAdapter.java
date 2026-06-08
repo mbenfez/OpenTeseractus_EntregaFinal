@@ -20,6 +20,11 @@ import com.google.firebase.auth.FirebaseAuth;
 
 import java.util.List;
 
+/**
+ * Adapter de RecyclerView para la lista de invitaciones pendientes.
+ * Gestiona los botones de aceptar y rechazar invitación con actualización optimista
+ * de la lista (elimina el ítem antes de confirmar la operación en servidor).
+ */
 public class InvitacionAdapter extends RecyclerView.Adapter<InvitacionAdapter.ViewHolder> {
 
     private List<Invitacion> invitaciones;

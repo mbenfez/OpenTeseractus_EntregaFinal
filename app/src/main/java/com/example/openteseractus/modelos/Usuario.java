@@ -5,6 +5,11 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.Locale;
 
+/**
+ * Representa a un usuario registrado en la aplicación.
+ * Se persiste en la colección {@code usuarios} de Firestore y se autentica
+ * mediante Firebase Authentication.
+ */
 public class Usuario {
 
     private String uid;
@@ -18,6 +23,13 @@ public class Usuario {
 
     public Usuario() {}
 
+    /**
+     * Crea un usuario activo con los datos mínimos y registra la fecha de alta.
+     *
+     * @param uid             UID de Firebase Authentication
+     * @param username        nombre de usuario público
+     * @param fechaNacimiento fecha de nacimiento para calcular la edad
+     */
     public Usuario(String uid, String username, Date fechaNacimiento) {
         this.uid = uid;
         this.username = username;
@@ -26,8 +38,11 @@ public class Usuario {
         this.activo = true;
     }
 
-    // ==================== MÉTODOS DE NEGOCIO ====================
-
+    /**
+     * Calcula la edad actual del usuario en años completos.
+     *
+     * @return edad en años, o {@code 0} si la fecha de nacimiento es nula
+     */
     public int getEdad() {
         if (fechaNacimiento == null) return 0;
 
@@ -42,10 +57,22 @@ public class Usuario {
         return edad;
     }
 
+    /**
+     * Indica si el usuario tiene 18 años o más.
+     *
+     * @return {@code true} si la edad calculada es &ge; 18
+     */
     public boolean esMayorDeEdad() {
         return getEdad() >= 18;
     }
 
+    /**
+     * Valida el formato del nombre de usuario:
+     * entre 3 y 20 caracteres, debe empezar por letra y solo puede contener
+     * letras, dígitos y guiones bajos.
+     *
+     * @return {@code true} si el nombre de usuario es válido
+     */
     public boolean validarUsername() {
         if (username == null || username.trim().isEmpty()) return false;
         if (username.length() < 3 || username.length() > 20) return false;
@@ -53,11 +80,10 @@ public class Usuario {
         return username.matches("^[a-zA-Z][a-zA-Z0-9_]*$");
     }
 
+    /** Marca al usuario como inactivo (p.ej. al cerrar sesión o eliminar la cuenta). */
     public void desactivar() {
         this.activo = false;
     }
-
-    // ==================== GETTERS Y SETTERS ====================
 
     public String getUid() { return uid; }
     public void setUid(String uid) { this.uid = uid; }

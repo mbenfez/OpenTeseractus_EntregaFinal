@@ -22,6 +22,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Adapter de RecyclerView para la lista de miembros de un grupo.
+ * Carga asincrónicamente el nombre y la foto de perfil de cada miembro desde Firestore,
+ * mantiene una caché interna de usernames para filtrado local sin llamadas adicionales
+ * y resalta al usuario actual en el color primario.
+ */
 public class MiembroAdapter extends RecyclerView.Adapter<MiembroAdapter.ViewHolder> {
 
     public interface OnMiembroLongClickListener {
@@ -62,7 +68,6 @@ public class MiembroAdapter extends RecyclerView.Adapter<MiembroAdapter.ViewHold
         holder.tvNombre.setText("Cargando…");
         holder.viewEstado.setBackgroundResource(R.drawable.circle_gray);
 
-        // Highlight current user
         if (esMiActual) {
             holder.tvNombre.setTextColor(
                     holder.itemView.getContext().getResources().getColor(R.color.primary, null));
@@ -87,7 +92,6 @@ public class MiembroAdapter extends RecyclerView.Adapter<MiembroAdapter.ViewHold
                 holder.viewEstado.setBackgroundResource(
                         usuario.isActivo() ? R.drawable.circle_blue : R.drawable.circle_gray);
 
-                // Long press: admin actions (only for non-self members)
                 if (longClickListener != null && !esMiActual) {
                     holder.itemView.setOnLongClickListener(v -> {
                         longClickListener.onLongClick(miembro, usuario.getUsername());
@@ -114,7 +118,7 @@ public class MiembroAdapter extends RecyclerView.Adapter<MiembroAdapter.ViewHold
         miembros.clear();
         miembros.addAll(nuevos);
         notifyDataSetChanged();
-        // Precargar usernames en caché para poder filtrar
+        
         for (MiembroGrupo m : nuevos) {
             if (!usernameCache.containsKey(m.getUidMiembro())) {
                 usuarioRepository.obtenerUsuario(m.getUidMiembro(), new FirestoreCallback<Usuario>() {
@@ -129,6 +133,12 @@ public class MiembroAdapter extends RecyclerView.Adapter<MiembroAdapter.ViewHold
         }
     }
 
+    /**
+     * Filtra los miembros visibles por username usando la caché local.
+     * Si la consulta está vacía, restaura la lista completa.
+     *
+     * @param query texto de búsqueda (insensible a mayúsculas)
+     */
     public void filtrar(String query) {
         miembros.clear();
         if (query == null || query.trim().isEmpty()) {

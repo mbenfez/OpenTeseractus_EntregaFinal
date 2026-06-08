@@ -41,6 +41,15 @@ import com.google.firebase.auth.FirebaseAuth;
 
 import java.util.Locale;
 
+/**
+ * Pantalla de detalle de un teseracto.
+ * Muestra el póster, backdrop, sinopsis, información técnica y notas (grupo, TMDB y usuario)
+ * obtenidas de TMDB y de las valoraciones de Firestore.
+ * Un BottomSheet permite al usuario introducir su valoración con puntuaciones opcionales
+ * de dirección, guion y actores; la nota general se recalcula automáticamente a partir
+ * de los detalles introducidos.
+ * El botón de eliminar solo se muestra al creador del teseracto o a un administrador del grupo.
+ */
 public class TeseractoActivity extends AppCompatActivity {
 
     private static String formatNota(double nota) {
@@ -187,7 +196,6 @@ public class TeseractoActivity extends AppCompatActivity {
 
                             chipNotaTMDB.setText(formatNota(detalle.getVoteAverage()));
 
-                            // Año separado de duración
                             String anio = detalle.getFechaSalida();
                             tvAnio.setText(anio != null && !anio.isEmpty() ? anio : "");
                             tvAnio.setVisibility(anio != null && !anio.isEmpty() ? View.VISIBLE : View.GONE);
@@ -201,7 +209,6 @@ public class TeseractoActivity extends AppCompatActivity {
                                         + getString(R.string.detail_episodes));
                             }
 
-                            // Director / Creador
                             String director = detalle.getDirectorOCreador();
                             if (director != null && !director.isEmpty()) {
                                 tvDirector.setText("movie".equals(detalle.getMediaType())
@@ -538,13 +545,11 @@ public class TeseractoActivity extends AppCompatActivity {
         String uidActual = com.google.firebase.auth.FirebaseAuth.getInstance()
                 .getCurrentUser().getUid();
 
-        // El creador siempre puede eliminar
         if (uidActual.equals(teseracto.getUidAbiertoPor())) {
             mostrarBotonEliminar(teseracto);
             return;
         }
 
-        // También los admin del grupo
         grupoRepository.obtenerMiembrosGrupo(teseracto.getIdGrupo(),
                 new FirestoreCallback<java.util.List<com.example.openteseractus.modelos.MiembroGrupo>>() {
                     @Override

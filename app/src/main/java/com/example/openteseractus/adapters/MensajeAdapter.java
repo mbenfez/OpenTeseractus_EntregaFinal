@@ -18,6 +18,12 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+/**
+ * Adapter de RecyclerView para el chat de un teseracto.
+ * Maneja tres tipos de vista: separador de fecha ({@code TIPO_FECHA}),
+ * mensaje propio enviado ({@code TIPO_ENVIADO}) y mensaje recibido ({@code TIPO_RECIBIDO}).
+ * Los separadores de fecha se insertan automáticamente al llamar a {@link #update(java.util.List)}.
+ */
 public class MensajeAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
     private static final int TIPO_FECHA    = 0;
@@ -27,7 +33,6 @@ public class MensajeAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
     private final String uidActual;
     private final Map<String, String> nombresUsuarios;
 
-    // Items is a mix of Mensaje and String (date headers)
     private List<Object> items = new ArrayList<>();
 
     private final SimpleDateFormat sdfHora  = new SimpleDateFormat("HH:mm", Locale.getDefault());
@@ -96,6 +101,12 @@ public class MensajeAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
         return items.size();
     }
 
+    /**
+     * Reemplaza los mensajes mostrados e inserta automáticamente separadores de fecha
+     * (etiquetas "Hoy", "Ayer" o la fecha completa) entre grupos de mensajes de días distintos.
+     *
+     * @param nuevos lista actualizada de mensajes ordenados cronológicamente
+     */
     public void update(List<Mensaje> nuevos) {
         items.clear();
 
@@ -135,8 +146,6 @@ public class MensajeAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
         cal.set(java.util.Calendar.MILLISECOND, 0);
         return cal.getTimeInMillis();
     }
-
-    // ==================== VIEW HOLDERS ====================
 
     static class ViewHolderFecha extends RecyclerView.ViewHolder {
         TextView tvFecha;

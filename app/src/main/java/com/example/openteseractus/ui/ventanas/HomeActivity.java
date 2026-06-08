@@ -66,6 +66,14 @@ import com.google.firebase.storage.StorageReference;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Pantalla principal de la aplicación.
+ * Muestra la lista de grupos del usuario con búsqueda local, un navigation drawer
+ * con opciones de perfil (cambiar foto, username, contraseña y eliminar cuenta),
+ * una barra de navegación inferior con badge de invitaciones pendientes y
+ * un FAB para crear o unirse a un grupo.
+ * Inicia {@link MensajeNotificacionService} como servicio en primer plano.
+ */
 public class HomeActivity extends AppCompatActivity {
 
     private DrawerLayout drawerLayout;
@@ -176,10 +184,8 @@ public class HomeActivity extends AppCompatActivity {
             return true;
         });
 
-        // Pfp opens the drawer
         imgPerfil.setOnClickListener(v -> drawerLayout.openDrawer(GravityCompat.START));
 
-        // Group search filter
         SearchView searchView = topBar.findViewById(R.id.searchView);
         if (searchView != null) {
             searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
@@ -194,7 +200,6 @@ public class HomeActivity extends AppCompatActivity {
             });
         }
 
-        // Drawer navigation item clicks
         navigationView.setNavigationItemSelectedListener(item -> {
             drawerLayout.closeDrawer(GravityCompat.START);
             int id = item.getItemId();
@@ -204,6 +209,12 @@ public class HomeActivity extends AppCompatActivity {
                 mostrarDialogoCambiarUsername();
             } else if (id == R.id.nav_reset_password) {
                 restablecerContrasena();
+            } else if (id == R.id.nav_tmdb_attribution) {
+                new AlertDialog.Builder(this)
+                        .setTitle("TMDB")
+                        .setMessage("This product uses the TMDB API but is not endorsed or certified by TMDB.")
+                        .setPositiveButton("OK", null)
+                        .show();
             } else if (id == R.id.nav_delete_account) {
                 confirmarEliminarCuenta();
             } else if (id == R.id.nav_logout) {
@@ -269,7 +280,6 @@ public class HomeActivity extends AppCompatActivity {
             public void onSuccess(Usuario usuario) {
                 usuarioActual = usuario;
 
-                // Toolbar pfp
                 Glide.with(HomeActivity.this)
                         .load(usuario.getFotoPerfilUrl())
                         .placeholder(R.drawable.pfp_placeholder)
@@ -277,7 +287,6 @@ public class HomeActivity extends AppCompatActivity {
                         .circleCrop()
                         .into(imgPerfil);
 
-                // Drawer header
                 View header = navigationView.getHeaderView(0);
                 ShapeableImageView navImg = header.findViewById(R.id.navImgPerfil);
                 TextView navUsername = header.findViewById(R.id.navTvUsername);
@@ -377,7 +386,6 @@ public class HomeActivity extends AppCompatActivity {
     private void cambiarUsername(String nuevoUsername) {
         if (usuarioActual == null) return;
 
-        // Reuse model validation
         Usuario temp = new Usuario();
         temp.setUsername(nuevoUsername);
         if (!temp.validarUsername()) {
@@ -485,7 +493,7 @@ public class HomeActivity extends AppCompatActivity {
     }
 
     private void abrirGrupo(Grupo grupo) {
-        // Update last-entry timestamp so groups sort WhatsApp-style on next load
+        
         if (auth.getCurrentUser() != null) {
             grupoRepository.actualizarUltimaActividad(
                     auth.getCurrentUser().getUid(), grupo.getId());

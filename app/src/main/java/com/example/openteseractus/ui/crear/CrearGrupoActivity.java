@@ -34,15 +34,23 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 
+/**
+ * Pantalla para crear un nuevo grupo o unirse a uno existente.
+ * Contiene dos pestañas (TabLayout):
+ * <ul>
+ *   <li><b>Crear:</b> permite introducir un nombre y una foto opcional para el grupo.</li>
+ *   <li><b>Unirse:</b> permite buscar un grupo por su código de 6 caracteres y previsualizar
+ *       su nombre antes de confirmar la unión.</li>
+ * </ul>
+ * Devuelve {@code RESULT_OK} al Activity llamante cuando la operación es exitosa.
+ */
 public class CrearGrupoActivity extends AppCompatActivity {
 
-    // ── Common ──
     private MaterialToolbar toolbar;
     private TabLayout tabLayout;
     private ScrollView panelCrear;
     private ScrollView panelUnirse;
 
-    // ── Panel crear ──
     private FrameLayout frameGrupoFoto;
     private ImageView ivGrupoFoto;
     private TextInputLayout tilNombreGrupo;
@@ -50,7 +58,6 @@ public class CrearGrupoActivity extends AppCompatActivity {
     private MaterialButton btnCrearGrupo;
     private ProgressBar progressBar;
 
-    // ── Panel unirse ──
     private TextInputLayout tilCodigo;
     private TextInputEditText etCodigo;
     private MaterialButton btnBuscarGrupo;
@@ -60,7 +67,6 @@ public class CrearGrupoActivity extends AppCompatActivity {
     private MaterialButton btnUnirseGrupo;
     private ProgressBar progressBarUnirse;
 
-    // ── Firebase ──
     private GrupoRepository grupoRepository;
     private FirebaseAuth auth;
     private FirebaseStorage storage;
@@ -95,7 +101,6 @@ public class CrearGrupoActivity extends AppCompatActivity {
         panelCrear = findViewById(R.id.panelCrear);
         panelUnirse = findViewById(R.id.panelUnirse);
 
-        // Panel crear
         frameGrupoFoto = findViewById(R.id.frameGrupoFoto);
         ivGrupoFoto = findViewById(R.id.ivGrupoFoto);
         tilNombreGrupo = findViewById(R.id.tilNombreGrupo);
@@ -103,7 +108,6 @@ public class CrearGrupoActivity extends AppCompatActivity {
         btnCrearGrupo = findViewById(R.id.btnCrearGrupo);
         progressBar = findViewById(R.id.progressBar);
 
-        // Panel unirse
         tilCodigo = findViewById(R.id.tilCodigo);
         etCodigo = findViewById(R.id.etCodigo);
         btnBuscarGrupo = findViewById(R.id.btnBuscarGrupo);
@@ -158,7 +162,7 @@ public class CrearGrupoActivity extends AppCompatActivity {
     }
 
     private void setupListeners() {
-        // La imagen del grupo es el botón de selección
+        
         frameGrupoFoto.setOnClickListener(v -> pickImageLauncher.launch("image/*"));
 
         btnCrearGrupo.setOnClickListener(v -> crearGrupo());
@@ -171,10 +175,6 @@ public class CrearGrupoActivity extends AppCompatActivity {
             }
         });
     }
-
-    // ─────────────────────────────────────────────────
-    //  CREAR GRUPO
-    // ─────────────────────────────────────────────────
 
     private void crearGrupo() {
         String nombre = etNombreGrupo.getText().toString().trim();
@@ -248,10 +248,6 @@ public class CrearGrupoActivity extends AppCompatActivity {
         frameGrupoFoto.setEnabled(!show);
         etNombreGrupo.setEnabled(!show);
     }
-
-    // ─────────────────────────────────────────────────
-    //  UNIRSE CON CÓDIGO
-    // ─────────────────────────────────────────────────
 
     private void buscarGrupoPorCodigo() {
         String codigo = etCodigo.getText().toString().trim().toUpperCase();

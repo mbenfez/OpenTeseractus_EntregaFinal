@@ -20,6 +20,11 @@ import com.example.openteseractus.repositorios.UsuarioRepository;
 
 import java.util.List;
 
+/**
+ * Adapter de RecyclerView que muestra la lista de grupos del usuario.
+ * Por cada ítem carga asincrónicamente el número de miembros y el nombre
+ * del creador desde Firestore.
+ */
 public class GrupoAdapter extends RecyclerView.Adapter<GrupoAdapter.GrupoViewHolder> {
 
     private List<Grupo> grupos;
@@ -80,7 +85,6 @@ public class GrupoAdapter extends RecyclerView.Adapter<GrupoAdapter.GrupoViewHol
             tvNombreGrupo.setText(grupo.getNomGrupo());
             tvCreadorGrupo.setText("");
 
-            // Member count
             grupoRepository.obtenerCantidadMiembros(grupo.getId(),
                     new FirestoreCallback<Integer>() {
                         @Override
@@ -95,7 +99,6 @@ public class GrupoAdapter extends RecyclerView.Adapter<GrupoAdapter.GrupoViewHol
                         }
                     });
 
-            // Creator username
             if (grupo.getUidCreador() != null) {
                 usuarioRepository.obtenerUsuario(grupo.getUidCreador(),
                         new FirestoreCallback<Usuario>() {
@@ -115,7 +118,6 @@ public class GrupoAdapter extends RecyclerView.Adapter<GrupoAdapter.GrupoViewHol
                         });
             }
 
-            // Group image
             String fotoUrl = grupo.getFotoGrupoUrl();
             Log.d("DEBUG_IMAGEN", "Grupo: " + grupo.getNomGrupo());
             Log.d("DEBUG_IMAGEN", "URL: " + (fotoUrl != null ? fotoUrl : "NULL"));

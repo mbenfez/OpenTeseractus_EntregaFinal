@@ -1,5 +1,12 @@
 package com.example.openteseractus.modelos;
 
+/**
+ * Representa la valoración que un usuario realiza sobre un teseracto.
+ * Incluye una puntuación general (0–10) y, opcionalmente, puntuaciones detalladas
+ * por actuaciones, guion y dirección. Se almacena en la subcolección
+ * {@code valoraciones} del teseracto, usando el UID del usuario como ID de documento
+ * para que cada usuario solo pueda tener una valoración activa por teseracto.
+ */
 public class Valoracion {
 
     private String uidValoradoPor;
@@ -14,6 +21,13 @@ public class Valoracion {
 
     public Valoracion() {}
 
+    /**
+     * Crea una valoración con puntuación general y registra el momento de valoración.
+     *
+     * @param uidValoradoPor UID del usuario que valora
+     * @param idTeseracto    identificador del teseracto valorado
+     * @param puntuacion     puntuación general entre 0 y 10
+     */
     public Valoracion(String uidValoradoPor, String idTeseracto, double puntuacion) {
         this.uidValoradoPor = uidValoradoPor;
         this.idTeseracto = idTeseracto;
@@ -21,17 +35,24 @@ public class Valoracion {
         this.fechaValoracion = System.currentTimeMillis();
     }
 
-    // ==================== MÉTODOS DE NEGOCIO ====================
-
+    /**
+     * Comprueba que la puntuación general está dentro del rango permitido.
+     *
+     * @return {@code true} si la puntuación está entre 0 y 10 (ambos inclusive)
+     */
     public boolean esValida() {
         return puntuacion >= 0 && puntuacion <= 10;
     }
 
+    /**
+     * Calcula la media aritmética de las tres puntuaciones detalladas
+     * (actores, guion y dirección).
+     *
+     * @return media de las puntuaciones de detalle
+     */
     public double calcularMediaDetalle() {
         return (puntuacionActores + puntuacionGuion + puntuacionDireccion) / 3.0;
     }
-
-    // ==================== GETTERS Y SETTERS ====================
 
     public String getUidValoradoPor() { return uidValoradoPor; }
     public void setUidValoradoPor(String uidValoradoPor) { this.uidValoradoPor = uidValoradoPor; }

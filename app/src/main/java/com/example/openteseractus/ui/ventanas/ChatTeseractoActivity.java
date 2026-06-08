@@ -33,6 +33,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Pantalla de chat en tiempo real de un teseracto.
+ * Suscribe un listener de Firestore para recibir mensajes nuevos y
+ * actualiza {@link MensajeNotificacionService#teseractoActivo} al entrar/salir
+ * para que el servicio no duplique notificaciones mientras la pantalla está visible.
+ * Permite silenciar/activar notificaciones desde el menú de la toolbar.
+ */
 public class ChatTeseractoActivity extends AppCompatActivity {
 
     private RecyclerView rvMensajes;
@@ -48,10 +55,8 @@ public class ChatTeseractoActivity extends AppCompatActivity {
     private String tituloTeseracto;
     private String uidActual;
 
-    // Mapa uid -> username para mostrar el nombre del autor
     private final Map<String, String> nombresUsuarios = new HashMap<>();
 
-    // Listener de Firestore; se cancela al salir de la pantalla
     private ListenerRegistration listenerMensajes;
 
     private boolean notificacionesSilenciadas = false;
@@ -144,7 +149,6 @@ public class ChatTeseractoActivity extends AppCompatActivity {
 
         btnEnviar.setOnClickListener(v -> enviarMensaje());
 
-        // También enviar al pulsar la tecla "enviar" del teclado
         etMensaje.setOnEditorActionListener((v, actionId, event) -> {
             if (actionId == EditorInfo.IME_ACTION_SEND) {
                 enviarMensaje();
@@ -154,7 +158,6 @@ public class ChatTeseractoActivity extends AppCompatActivity {
         });
     }
 
-    // Precarga el username del usuario actual en el mapa
     private void cargarNombreUsuarioActual() {
         usuarioRepository.obtenerUsuario(uidActual, new FirestoreCallback<Usuario>() {
             @Override
@@ -164,7 +167,7 @@ public class ChatTeseractoActivity extends AppCompatActivity {
 
             @Override
             public void onFailure(String error) {
-                // Sin nombre no es crítico, se mostrará el uid
+                
             }
         });
     }
@@ -176,7 +179,7 @@ public class ChatTeseractoActivity extends AppCompatActivity {
 
                     @Override
                     public void onSuccess(List<Mensaje> mensajes) {
-                        // Resuelve nombres de autores aún desconocidos
+                        
                         for (Mensaje m : mensajes) {
                             if (!nombresUsuarios.containsKey(m.getUidAutor())) {
                                 resolverNombreAutor(m.getUidAutor());
@@ -206,7 +209,7 @@ public class ChatTeseractoActivity extends AppCompatActivity {
     }
 
     private void resolverNombreAutor(String uid) {
-        // Marcamos con el uid para evitar peticiones duplicadas mientras resuelve
+        
         nombresUsuarios.put(uid, uid);
         usuarioRepository.obtenerUsuario(uid, new FirestoreCallback<Usuario>() {
             @Override
@@ -217,7 +220,7 @@ public class ChatTeseractoActivity extends AppCompatActivity {
 
             @Override
             public void onFailure(String error) {
-                // Queda el uid como fallback
+                
             }
         });
     }
@@ -295,7 +298,7 @@ public class ChatTeseractoActivity extends AppCompatActivity {
         mensajeRepository.enviarMensaje(mensaje, new FirestoreCallback<Void>() {
             @Override
             public void onSuccess(Void resultado) {
-                // El listener en tiempo real ya actualizará la lista
+                
             }
 
             @Override
@@ -314,7 +317,7 @@ public class ChatTeseractoActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        // Cancelar el listener para evitar fugas de memoria
+        
         if (listenerMensajes != null) {
             listenerMensajes.remove();
         }

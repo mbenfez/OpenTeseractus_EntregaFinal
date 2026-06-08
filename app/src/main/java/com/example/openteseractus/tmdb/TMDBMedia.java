@@ -2,6 +2,11 @@ package com.example.openteseractus.tmdb;
 
 import com.google.gson.annotations.SerializedName;
 
+/**
+ * Resultado básico de búsqueda de la API de TMDB.
+ * Representa una película ({@code media_type = "movie"}) o serie ({@code media_type = "tv"})
+ * tal como aparece en la respuesta de {@code /search/multi}.
+ */
 public class TMDBMedia {
 
     private int id;

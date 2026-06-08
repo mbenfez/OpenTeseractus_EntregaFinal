@@ -10,6 +10,12 @@ import androidx.viewpager2.adapter.FragmentStateAdapter;
 import com.example.openteseractus.ui.fragments.CarteleraFragment;
 import com.example.openteseractus.ui.fragments.MiembrosFragment;
 
+/**
+ * Adapter de ViewPager2 para la pantalla de grupo.
+ * Gestiona dos pestañas: posición 0 → {@link com.example.openteseractus.ui.fragments.CarteleraFragment},
+ * posición 1 → {@link com.example.openteseractus.ui.fragments.MiembrosFragment}.
+ * Ambos fragmentos reciben el ID del grupo a través de un {@link android.os.Bundle}.
+ */
 public class GrupoPagerAdapter extends FragmentStateAdapter {
 
     private final String idGrupo;
@@ -31,7 +37,6 @@ public class GrupoPagerAdapter extends FragmentStateAdapter {
             fragment = new MiembrosFragment();
         }
 
-        // pasar idGrupo a cada fragment
         fragment.setArguments(getBundle());
 
         return fragment;

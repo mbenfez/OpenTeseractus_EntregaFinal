@@ -8,6 +8,12 @@ import com.example.openteseractus.servicios.AuthService;
 import com.example.openteseractus.ui.auth.LoginActivity;
 import com.example.openteseractus.ui.ventanas.HomeActivity;
 
+/**
+ * Activity de entrada de la aplicación.
+ * Comprueba si hay sesión activa y redirige a {@link com.example.openteseractus.ui.ventanas.HomeActivity}
+ * o a {@link com.example.openteseractus.ui.auth.LoginActivity} según corresponda.
+ * No muestra ningún layout propio.
+ */
 public class MainActivity extends AppCompatActivity {
 
     private AuthService authService;

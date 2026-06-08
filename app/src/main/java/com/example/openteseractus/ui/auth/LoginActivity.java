@@ -19,6 +19,12 @@ import com.example.openteseractus.modelos.Usuario;
 import com.example.openteseractus.servicios.AuthService;
 import com.example.openteseractus.ui.ventanas.HomeActivity;
 
+/**
+ * Pantalla de inicio de sesión.
+ * Acepta email o nombre de usuario como identificador y delega en
+ * {@link com.example.openteseractus.servicios.AuthService} para la autenticación.
+ * Muestra un mensaje específico si el email del usuario no ha sido verificado.
+ */
 public class LoginActivity extends AppCompatActivity {
 
     private EditText etEmail, etPassword;
@@ -46,7 +52,6 @@ public class LoginActivity extends AppCompatActivity {
 
         btnLogin.setOnClickListener(v -> login());
 
-        // Ir a registro
         tvGoToRegister.setOnClickListener(v ->
                 startActivity(new Intent(LoginActivity.this, RegisterActivity.class))
         );

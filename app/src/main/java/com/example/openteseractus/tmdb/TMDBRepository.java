@@ -11,6 +11,11 @@ import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
+/**
+ * Repositorio que centraliza las llamadas a la API de TMDB usando Retrofit.
+ * Filtra los resultados de búsqueda para devolver únicamente películas y series,
+ * descartando personas u otros tipos de media.
+ */
 public class TMDBRepository {
 
     private static final String TAG = "TMDBRepository";

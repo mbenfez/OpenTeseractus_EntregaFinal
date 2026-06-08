@@ -28,6 +28,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * Pantalla de búsqueda y creación de teseractos.
+ * Permite buscar películas y series en TMDB mediante una SearchView y,
+ * al seleccionar un resultado, comprueba que no exista ya ese teseracto
+ * en el grupo antes de confirmar la creación.
+ */
 public class CrearTeseractoActivity extends AppCompatActivity {
 
     private SearchView searchView;

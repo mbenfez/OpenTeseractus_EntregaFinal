@@ -3,6 +3,11 @@ package com.example.openteseractus.modelos;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Representa un teseracto: la entrada de una película o serie dentro de un grupo.
+ * Contiene la referencia a TMDB, la nota media calculada a partir de las valoraciones
+ * de los miembros y la lista de participantes que han enviado mensajes en su chat.
+ */
 public class Teseracto {
 
     private String id;
@@ -23,6 +28,15 @@ public class Teseracto {
 
     public Teseracto() {}
 
+    /**
+     * Crea un teseracto con sus datos de identificación y lo inicializa sin valoraciones.
+     *
+     * @param id           identificador único del teseracto
+     * @param idGrupo      identificador del grupo al que pertenece
+     * @param uidAbiertoPor UID del usuario que crea el teseracto
+     * @param tmdbId       identificador de la película o serie en TMDB
+     * @param titulo       título de la película o serie
+     */
     public Teseracto(String id, String idGrupo, String uidAbiertoPor, int tmdbId, String titulo) {
         this.id = id;
         this.idGrupo = idGrupo;
@@ -37,8 +51,12 @@ public class Teseracto {
         this.notaMedia = 0.0;
     }
 
-    // ==================== MÉTODOS DE NEGOCIO ====================
-
+    /**
+     * Incorpora una nueva puntuación a la nota media del teseracto usando
+     * la fórmula de media incremental: {@code (mediaActual * n + nueva) / (n + 1)}.
+     *
+     * @param nuevaPuntuacion puntuación a añadir (0–10)
+     */
     public void actualizarNotaMedia(double nuevaPuntuacion) {
         double total = this.notaMedia * this.numValoraciones;
         total += nuevaPuntuacion;
@@ -47,15 +65,20 @@ public class Teseracto {
         this.notaMedia = total / this.numValoraciones;
     }
 
+    /** Actualiza el timestamp de última actividad al momento actual. */
     public void actualizarActividad() {
         this.ultimaActividad = System.currentTimeMillis();
     }
 
+    /**
+     * Comprueba si este teseracto pertenece al grupo indicado.
+     *
+     * @param idGrupo identificador del grupo a verificar
+     * @return {@code true} si el teseracto es de ese grupo
+     */
     public boolean perteneceAGrupo(String idGrupo) {
         return this.idGrupo != null && this.idGrupo.equals(idGrupo);
     }
-
-    // ==================== GETTERS Y SETTERS ====================
 
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }

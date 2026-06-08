@@ -26,6 +26,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * Pantalla para invitar a un usuario a un grupo.
+ * Muestra un buscador de usuarios por username y, al seleccionar uno,
+ * envía una invitación usando el nombre del usuario actual como remitente.
+ */
 public class AgregarUsuarioActivity extends AppCompatActivity {
 
     private SearchView searchView;

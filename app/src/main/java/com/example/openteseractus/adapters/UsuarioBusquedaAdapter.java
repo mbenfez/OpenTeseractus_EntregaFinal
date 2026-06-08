@@ -15,6 +15,10 @@ import com.example.openteseractus.modelos.Usuario;
 
 import java.util.List;
 
+/**
+ * Adapter de RecyclerView para los resultados de búsqueda de usuarios.
+ * Muestra la foto de perfil, username e indicador de estado online de cada usuario.
+ */
 public class UsuarioBusquedaAdapter extends RecyclerView.Adapter<UsuarioBusquedaAdapter.ViewHolder> {
 
     public interface OnUsuarioClickListener {

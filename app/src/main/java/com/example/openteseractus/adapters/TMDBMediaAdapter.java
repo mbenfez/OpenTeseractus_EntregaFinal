@@ -20,6 +20,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Adapter de RecyclerView para los resultados de búsqueda de TMDB.
+ * Carga el director/creador de cada ítem de forma asíncrona y lo almacena
+ * en una caché interna para no repetir la petición al hacer scroll.
+ */
 public class TMDBMediaAdapter extends RecyclerView.Adapter<TMDBMediaAdapter.ViewHolder> {
 
     public interface OnMediaClickListener {
@@ -29,7 +34,7 @@ public class TMDBMediaAdapter extends RecyclerView.Adapter<TMDBMediaAdapter.View
     private List<TMDBMedia> resultados;
     private final OnMediaClickListener listener;
     private final TMDBRepository tmdbRepository = new TMDBRepository();
-    // Cache: tmdbId -> director name (null = not yet loaded, "" = no director)
+    
     private final Map<Integer, String> directorCache = new HashMap<>();
 
     public TMDBMediaAdapter(List<TMDBMedia> resultados, OnMediaClickListener listener) {
@@ -64,13 +69,12 @@ public class TMDBMediaAdapter extends RecyclerView.Adapter<TMDBMediaAdapter.View
 
         holder.itemView.setOnClickListener(v -> listener.onMediaClick(media));
 
-        // Lazy-load director
         if (directorCache.containsKey(media.getId())) {
             String dir = directorCache.get(media.getId());
             mostrarDirector(holder, dir);
         } else {
             holder.tvDirector.setVisibility(View.GONE);
-            directorCache.put(media.getId(), null); // mark as loading
+            directorCache.put(media.getId(), null); 
             tmdbRepository.obtenerDetalle(media.getId(), media.getMediaType(),
                     new FirestoreCallback<TMDBDetalle>() {
                         @Override

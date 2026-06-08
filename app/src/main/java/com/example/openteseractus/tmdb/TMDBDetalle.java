@@ -2,6 +2,12 @@ package com.example.openteseractus.tmdb;
 
 import com.google.gson.annotations.SerializedName;
 
+/**
+ * Representa el detalle completo de una película o serie obtenido de la API de TMDB.
+ * Los campos están mapeados desde el JSON de respuesta mediante {@link com.google.gson.annotations.SerializedName}.
+ * El campo {@link #mediaType} no viene de la API; se establece manualmente en
+ * {@link TMDBRepository} tras la llamada para distinguir entre {@code "movie"} y {@code "tv"}.
+ */
 public class TMDBDetalle {
 
     private int id;
@@ -66,6 +72,12 @@ public class TMDBDetalle {
     public String getMediaType() { return mediaType; }
     public void setMediaType(String mediaType) { this.mediaType = mediaType; }
 
+    /**
+     * Devuelve el título unificado, priorizando el campo {@code title} (películas)
+     * sobre {@code name} (series).
+     *
+     * @return título de la película o serie
+     */
     public String getTitulo() {
         if (title != null && !title.isEmpty()) {
             return title;
@@ -86,6 +98,12 @@ public class TMDBDetalle {
 
     public String getSinopsis() { return overview; }
 
+    /**
+     * Devuelve el año de estreno extrayendo los primeros 4 caracteres de la fecha
+     * de lanzamiento ({@code release_date} para películas, {@code first_air_date} para series).
+     *
+     * @return año como cadena de 4 dígitos, o cadena vacía si no disponible
+     */
     public String getFechaSalida() {
         String fecha;
 
@@ -111,6 +129,11 @@ public class TMDBDetalle {
     public double getVoteAverage() { return voteAverage; }
     public void setVoteAverage(double voteAverage) { this.voteAverage = voteAverage; }
 
+    /**
+     * Devuelve el nombre del director (películas) o del primer creador (series).
+     *
+     * @return nombre del director/creador, o {@code null} si no disponible
+     */
     public String getDirectorOCreador() {
         if ("movie".equals(mediaType)) {
             if (credits != null && credits.getCrew() != null) {

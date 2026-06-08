@@ -18,6 +18,12 @@ import com.example.openteseractus.modelos.Usuario;
 import com.example.openteseractus.servicios.AuthService;
 import java.util.Date;
 
+/**
+ * Pantalla de registro de nuevos usuarios.
+ * Recoge email, contraseña, confirmación de contraseña y nombre de usuario,
+ * y delega el proceso completo en {@link com.example.openteseractus.servicios.AuthService}.
+ * Al completarse con éxito cierra la pantalla (el usuario debe verificar su email antes de acceder).
+ */
 public class RegisterActivity extends AppCompatActivity {
 
     private EditText etEmail, etPassword, etPasswordConfirm, etUsername;
@@ -46,7 +52,6 @@ public class RegisterActivity extends AppCompatActivity {
 
         btnRegister.setOnClickListener(v -> registrar());
 
-        // Volver a login
         tvGoToLogin.setOnClickListener(v -> finish());
     }
 

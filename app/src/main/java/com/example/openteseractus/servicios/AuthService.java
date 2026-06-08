@@ -10,6 +10,10 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.auth.User;
 
+/**
+ * Servicio de autenticación que encapsula Firebase Authentication y coordina
+ * la creación/lectura del perfil del usuario en Firestore mediante {@link com.example.openteseractus.repositorios.UsuarioRepository}.
+ */
 public class AuthService {
 
     private static final String TAG = "AuthService";
@@ -23,12 +27,18 @@ public class AuthService {
     }
 
     /**
-     * Registra un nuevo usuario
-     * 1. Crea cuenta en Firebase Auth
-     * 2. Guarda datos del usuario en Firestore
+     * Registra un nuevo usuario: valida email, contraseña y username, comprueba
+     * que el username no esté en uso, crea la cuenta en Firebase Auth, persiste
+     * el perfil en Firestore y envía un email de verificación.
+     * Hace sign-out al finalizar; el usuario debe verificar su email antes de acceder.
+     *
+     * @param email    dirección de correo electrónico
+     * @param password contraseña (mínimo 6 caracteres)
+     * @param usuario  datos de perfil del nuevo usuario
+     * @param callback resultado: el usuario creado o un mensaje de error localizado
      */
     public void registrarUsuario(String email, String password, Usuario usuario, AuthCallback callback) {
-        // Validaciones previas
+        
         if (email == null || email.isEmpty()) {
             if (callback != null) callback.onFailure("El email es obligatorio");
             return;
@@ -44,7 +54,6 @@ public class AuthService {
             return;
         }
 
-        // Verificar que el username no esté en uso
         usuarioRepository.existeUsername(usuario.getUsername(), new FirestoreCallback<Boolean>() {
             @Override
             public void onSuccess(Boolean existe) {
@@ -53,7 +62,6 @@ public class AuthService {
                     return;
                 }
 
-                // Crear cuenta
                 mAuth.createUserWithEmailAndPassword(email, password)
                         .addOnSuccessListener(authResult -> {
                             FirebaseUser firebaseUser = authResult.getUser();
@@ -62,7 +70,6 @@ public class AuthService {
                                 usuario.setUid(uid);
                                 usuario.setEmail(email);
 
-                                // Guardar datos del usuario en Firestore
                                 usuarioRepository.crearUsuario(usuario, new FirestoreCallback<Usuario>() {
                                     @Override
                                     public void onSuccess(Usuario u) {
@@ -77,7 +84,7 @@ public class AuthService {
                                     @Override
                                     public void onFailure(String error) {
                                         Log.e(TAG, "Error al guardar datos del usuario: " + error);
-                                        // La cuenta de Auth se creó pero Firestore falló
+                                        
                                         firebaseUser.delete();
                                         if (callback != null) callback.onFailure("Error al guardar datos: " + error);
                                     }
@@ -99,7 +106,16 @@ public class AuthService {
         });
     }
 
-    // Inicia sesión con email o nombre de usuario y contraseña
+    /**
+     * Inicia sesión admitiendo tanto email como nombre de usuario como identificador.
+     * Si el identificador no contiene '@', resuelve el email asociado al username
+     * antes de intentar el login.
+     *
+     * @param identificador email o nombre de usuario
+     * @param password       contraseña del usuario
+     * @param callback       resultado: el usuario autenticado o un error.
+     *                       Si el email no está verificado, el error es {@code "email_not_verified"}.
+     */
     public void iniciarSesion(String identificador, String password, AuthCallback callback) {
         if (identificador == null || identificador.isEmpty()) {
             if (callback != null) callback.onFailure("El campo de acceso es obligatorio");
@@ -111,7 +127,6 @@ public class AuthService {
             return;
         }
 
-        // Si contiene '@' es un email; si no, es un nombre de usuario
         if (identificador.contains("@")) {
             loginConEmail(identificador, password, callback);
         } else {
@@ -130,7 +145,6 @@ public class AuthService {
         }
     }
 
-    // Realiza el inicio de sesión en Firebase Auth con email
     private void loginConEmail(String email, String password, AuthCallback callback) {
         mAuth.signInWithEmailAndPassword(email, password)
                 .addOnSuccessListener(authResult -> {
@@ -144,7 +158,6 @@ public class AuthService {
 
                         String uid = firebaseUser.getUid();
 
-                        // Obtener datos del usuario de Firestore
                         usuarioRepository.obtenerUsuario(uid, new FirestoreCallback<Usuario>() {
                             @Override
                             public void onSuccess(Usuario usuario) {
@@ -168,8 +181,10 @@ public class AuthService {
                 });
     }
 
-    // Cierra la sesión actual
-    // Cierra la sesión actual
+    /**
+     * Cierra la sesión del usuario: marca su estado como inactivo en Firestore
+     * y llama a {@code FirebaseAuth.signOut()}.
+     */
     public void cerrarSesion() {
         String uid = getUidActual();
         if (uid != null) {
@@ -179,24 +194,24 @@ public class AuthService {
         Log.d(TAG, "Sesión cerrada");
     }
 
-    // Obtiene el usuario actualmente autenticado
-
     public FirebaseUser getUsuarioActual() {
         return mAuth.getCurrentUser();
     }
 
-    // Verifica si hay un usuario autenticado
+    /**
+     * Indica si hay una sesión activa en Firebase Authentication.
+     *
+     * @return {@code true} si existe un usuario autenticado
+     */
     public boolean hayUsuarioAutenticado() {
         return mAuth.getCurrentUser() != null;
     }
 
-    // Obtiene el UID del usuario actual
     public String getUidActual() {
         FirebaseUser user = mAuth.getCurrentUser();
         return user != null ? user.getUid() : null;
     }
 
-    // Parsea los mensajes de error de Firebase Auth a mensajes más amigables
     private String parsearErrorAuth(String error) {
         if (error == null) return "Error desconocido";
 

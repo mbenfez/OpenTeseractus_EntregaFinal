@@ -45,6 +45,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * Fragment de gestión de miembros y configuración del grupo.
+ * Muestra la foto, nombre y miembros del grupo con su rol y estado online.
+ * Los administradores disponen de controles adicionales: editar nombre, foto,
+ * ascender/expulsar miembros, gestionar el código de invitación y salir del grupo.
+ */
 public class MiembrosFragment extends Fragment {
 
     private String idGrupo;
@@ -175,7 +181,7 @@ public class MiembrosFragment extends Fragment {
         grupoRepository.obtenerMiembrosGrupo(idGrupo, new FirestoreCallback<List<MiembroGrupo>>() {
             @Override
             public void onSuccess(List<MiembroGrupo> resultado) {
-                // Mover usuario actual al principio
+                
                 List<MiembroGrupo> ordenados = new ArrayList<>();
                 MiembroGrupo miActual = null;
                 for (MiembroGrupo m : resultado) {
